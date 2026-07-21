@@ -107,6 +107,46 @@ export async function createExpressApp() {
         }
       }
 
+      // Optional ImgBB upload proxy
+      let imgbbUrl: string | null = null;
+      try {
+        const layoutSettings = await fetchLayoutSettings();
+        if (layoutSettings && layoutSettings.imgbbApiKey) {
+          const apiKey = layoutSettings.imgbbApiKey.trim();
+          if (apiKey) {
+            console.log("[ImgBB Proxy] Detected ImgBB API Key. Uploading image directly to ImgBB CDN...");
+            const form = new URLSearchParams();
+            form.append("image", base64String);
+
+            const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+              method: "POST",
+              body: form,
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+              }
+            });
+
+            if (imgbbResponse.ok) {
+              const resJson = await imgbbResponse.json() as any;
+              if (resJson && resJson.success && resJson.data && resJson.data.url) {
+                imgbbUrl = resJson.data.url;
+                console.log("[ImgBB Proxy] Success! Image uploaded to ImgBB CDN. URL:", imgbbUrl);
+              } else {
+                console.warn("[ImgBB Proxy] Upload failed on ImgBB side:", resJson);
+              }
+            } else {
+              console.warn("[ImgBB Proxy] Connection error to ImgBB, status:", imgbbResponse.status);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[ImgBB Proxy] Exception during ImgBB upload check (falling back to MongoDB):", err);
+      }
+
+      if (imgbbUrl) {
+        return res.json({ url: imgbbUrl, id: `imgbb-${Date.now()}` });
+      }
+
       const id = `img-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
       const imageUrl = await saveUploadedImage(id, base64String, mimeType);
       

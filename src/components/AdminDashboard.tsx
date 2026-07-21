@@ -9038,6 +9038,47 @@ export default function AdminDashboard({
               </div>
             </div>
 
+            {/* 4. IMGBB IMAGE HOSTING CARD */}
+            <div className="bg-white border border-slate-200 shadow-xs rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-50 text-emerald-650 rounded-lg">
+                    <ImageIcon className="h-4 w-4" />
+                  </div>
+                  <span className="font-extrabold text-slate-900 uppercase tracking-wider text-xs">ImgBB Image CDN Hosting (Recommended)</span>
+                </div>
+                {localLayoutSettings.imgbbApiKey ? (
+                  <span className="text-[8px] font-black uppercase bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-150 flex items-center gap-1">
+                    <span className="h-1 w-1 bg-emerald-500 rounded-full animate-ping" />
+                    CDN Active
+                  </span>
+                ) : (
+                  <span className="text-[8px] font-black uppercase bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded border border-amber-150">
+                    MDB Fallback
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+                Speed up your storefront loading speeds. ImgBB is a completely <strong>free, lightning-fast image hosting CDN</strong>. 
+                When configured, any brand logos, blog banners, product images, or layout banners you upload will be permanently hosted on ImgBB and loaded via their fast global servers.
+              </p>
+
+              <div>
+                <label className="block text-slate-500 font-bold text-[9px] uppercase tracking-wider mb-1">ImgBB API Key (Free)</label>
+                <input
+                  type="text"
+                  value={localLayoutSettings.imgbbApiKey || ''}
+                  onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, imgbbApiKey: e.target.value })}
+                  className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  placeholder="e.g. 7f89d0a1b2c3d4e5f6a7b8c9"
+                />
+                <p className="text-[8.5px] text-slate-400 mt-1.5">
+                  Get your free API key in 10 seconds from <a href="https://api.imgbb.com/" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-bold">api.imgbb.com</a>.
+                </p>
+              </div>
+            </div>
+
           </div>
 
           {/* Right Side: Header Navigation Menu Builder */}
