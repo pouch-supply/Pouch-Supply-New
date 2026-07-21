@@ -15,7 +15,7 @@ import ProductEditor from './ProductEditor';
 import BlogContentEditor from './BlogContentEditor';
 import DiscountEditor from './DiscountEditor';
 import PlansCanOverlay from './PlansCanOverlay';
-import { Crown, Flame } from 'lucide-react';
+import { Crown, Flame, Cloud } from 'lucide-react';
 
 export const AVAILABLE_SECTION_TEMPLATES = [
   { type: 'Image banner', label: 'Image Banner', desc: 'Hero banner with centered headline overlay & CTA buttons', icon: 'ImageIcon' },
@@ -783,7 +783,9 @@ export default function AdminDashboard({
       footerLogoDescription: 'Leading premium directory for tobacco-free nicotine slim white canisters. Sourced directly from partners across Sweden, Poland, and Germany.',
       footerLogoImage: '',
       klaviyoPublicKey: '',
-      imgbbApiKey: '',
+      cloudinaryCloudName: '',
+      cloudinaryApiKey: '',
+      cloudinaryApiSecret: '',
       menuItems: [
         { id: '1', label: 'Home', tab: 'frontend-home', type: 'tab' },
         { id: '2', label: 'Subscribe', tab: 'frontend-subscribe', type: 'tab' },
@@ -9052,16 +9054,16 @@ export default function AdminDashboard({
               </div>
             </div>
 
-            {/* 4. IMGBB IMAGE HOSTING CARD */}
+            {/* 4. CLOUDINARY MEDIA CDN INTEGRATION CARD */}
             <div className="bg-white border border-slate-200 shadow-xs rounded-2xl p-5 space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-emerald-50 text-emerald-650 rounded-lg">
-                    <ImageIcon className="h-4 w-4" />
+                  <div className="p-1.5 bg-blue-50 text-blue-650 rounded-lg">
+                    <Cloud className="h-4 w-4" />
                   </div>
-                  <span className="font-extrabold text-slate-900 uppercase tracking-wider text-xs">ImgBB Image CDN Hosting (Recommended)</span>
+                  <span className="font-extrabold text-slate-900 uppercase tracking-wider text-xs">Cloudinary Media CDN</span>
                 </div>
-                {localLayoutSettings.imgbbApiKey ? (
+                {localLayoutSettings.cloudinaryCloudName ? (
                   <span className="text-[8px] font-black uppercase bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-150 flex items-center gap-1">
                     <span className="h-1 w-1 bg-emerald-500 rounded-full animate-ping" />
                     CDN Active
@@ -9074,23 +9076,47 @@ export default function AdminDashboard({
               </div>
 
               <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
-                Speed up your storefront loading speeds. ImgBB is a completely <strong>free, lightning-fast image hosting CDN</strong>. 
-                When configured, any brand logos, blog banners, product images, or layout banners you upload will be permanently hosted on ImgBB and loaded via their fast global servers.
+                Connect your storefront with <strong>Cloudinary CDN</strong>. It provides <strong>lightning-fast global image & video hosting with native support for smooth video streaming and fast loading times</strong>.
+                When configured, any product visuals, brand logo banners, or active section background videos you upload will be permanently hosted on Cloudinary, connected with your MongoDB cluster.
               </p>
 
-              <div>
-                <label className="block text-slate-500 font-bold text-[9px] uppercase tracking-wider mb-1">ImgBB API Key (Free)</label>
-                <input
-                  type="text"
-                  value={localLayoutSettings.imgbbApiKey || ''}
-                  onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, imgbbApiKey: e.target.value })}
-                  className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="e.g. 7f89d0a1b2c3d4e5f6a7b8c9"
-                />
-                <p className="text-[8.5px] text-slate-400 mt-1.5">
-                  Get your free API key in 10 seconds from <a href="https://api.imgbb.com/" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-bold">api.imgbb.com</a>.
-                </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-slate-500 font-bold text-[9px] uppercase tracking-wider mb-1">Cloudinary Cloud Name</label>
+                  <input
+                    type="text"
+                    value={localLayoutSettings.cloudinaryCloudName || ''}
+                    onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, cloudinaryCloudName: e.target.value })}
+                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="e.g. pouch-supply"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-500 font-bold text-[9px] uppercase tracking-wider mb-1">Cloudinary API Key</label>
+                  <input
+                    type="text"
+                    value={localLayoutSettings.cloudinaryApiKey || ''}
+                    onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, cloudinaryApiKey: e.target.value })}
+                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="e.g. 123456789012345"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-500 font-bold text-[9px] uppercase tracking-wider mb-1">Cloudinary API Secret</label>
+                  <input
+                    type="password"
+                    value={localLayoutSettings.cloudinaryApiSecret || ''}
+                    onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, cloudinaryApiSecret: e.target.value })}
+                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="e.g. *********************************"
+                  />
+                </div>
               </div>
+              <p className="text-[8.5px] text-slate-400 mt-1.5 leading-normal">
+                Credentials are saved securely. You can also specify them as environment variables (<code>CLOUDINARY_CLOUD_NAME</code>, etc.). Register for free at <a href="https://cloudinary.com/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">cloudinary.com</a>.
+              </p>
             </div>
 
           </div>

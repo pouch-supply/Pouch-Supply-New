@@ -318,6 +318,8 @@ export interface LayoutSettings {
   footerLogoImage: string; // Base64 or URL
   menuItems: MenuItem[];
   klaviyoPublicKey?: string;
-  imgbbApiKey?: string;
+  cloudinaryCloudName?: string;
+  cloudinaryApiKey?: string;
+  cloudinaryApiSecret?: string;
 }
 

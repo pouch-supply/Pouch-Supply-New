@@ -192,7 +192,9 @@ export default function App() {
       footerLogoDescription: 'Leading premium directory for tobacco-free nicotine slim white canisters. Sourced directly from partners across Sweden, Poland, and Germany.',
       footerLogoImage: '',
       klaviyoPublicKey: '',
-      imgbbApiKey: '',
+      cloudinaryCloudName: '',
+      cloudinaryApiKey: '',
+      cloudinaryApiSecret: '',
       menuItems: [
         { id: '1', label: 'Home', tab: 'frontend-home', type: 'tab' },
         { id: '2', label: 'Subscribe', tab: 'frontend-subscribe', type: 'tab' },

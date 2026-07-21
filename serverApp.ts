@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
 import { fetchResource, saveResource, saveUploadedImage, getUploadedImage, getConnectionStatus, updateMongoUri, getDb, getDatabaseDetails, fetchLayoutSettings, saveLayoutSettings } from "./serverDb";
 
 // Import modular routers for products, collections, customers, orders, files, discounts, custom pages, and blogs
@@ -107,44 +108,62 @@ export async function createExpressApp() {
         }
       }
 
-      // Optional ImgBB upload proxy
-      let imgbbUrl: string | null = null;
+      // Optional Cloudinary Upload proxy
+      let cloudinaryUrl: string | null = null;
       try {
         const layoutSettings = await fetchLayoutSettings();
-        if (layoutSettings && layoutSettings.imgbbApiKey) {
-          const apiKey = layoutSettings.imgbbApiKey.trim();
-          if (apiKey) {
-            console.log("[ImgBB Proxy] Detected ImgBB API Key. Uploading image directly to ImgBB CDN...");
-            const form = new URLSearchParams();
-            form.append("image", base64String);
+        const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+        const apiKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+        const apiSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
 
-            const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-              method: "POST",
-              body: form,
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-              }
-            });
+        if (cloudName && apiKey && apiSecret) {
+          console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
+          cloudinary.config({
+            cloud_name: cloudName,
+            api_key: apiKey,
+            api_secret: apiSecret,
+            secure: true
+          });
 
-            if (imgbbResponse.ok) {
-              const resJson = await imgbbResponse.json() as any;
-              if (resJson && resJson.success && resJson.data && resJson.data.url) {
-                imgbbUrl = resJson.data.url;
-                console.log("[ImgBB Proxy] Success! Image uploaded to ImgBB CDN. URL:", imgbbUrl);
-              } else {
-                console.warn("[ImgBB Proxy] Upload failed on ImgBB side:", resJson);
-              }
-            } else {
-              console.warn("[ImgBB Proxy] Connection error to ImgBB, status:", imgbbResponse.status);
+          const uploadStr = data.startsWith("data:") ? data : `data:${mimeType};base64,${base64String}`;
+          console.log(`[Cloudinary Proxy] Uploading ${mimeType} asset directly to Cloudinary edge servers...`);
+          
+          const cloudinaryResponse = await cloudinary.uploader.upload(uploadStr, {
+            resource_type: "auto",
+            folder: "pouch_supply"
+          });
+
+          if (cloudinaryResponse && cloudinaryResponse.secure_url) {
+            cloudinaryUrl = cloudinaryResponse.secure_url;
+            console.log("[Cloudinary Proxy] Success! Uploaded to Cloudinary CDN URL:", cloudinaryUrl);
+
+            // Register in files collection in MongoDB
+            try {
+              const currentFiles = await fetchResource("files") || [];
+              const calculatedSize = `${Math.round((base64String.length * 0.75) / 1024)} KB`;
+              const filenameFromMime = `cloudinary_${Date.now()}.${mimeType.split("/")[1] || "png"}`;
+              const newFileEntry = {
+                id: `cloud-${Date.now()}`,
+                fileName: filenameFromMime,
+                url: cloudinaryUrl,
+                altText: "Cloudinary CDN hosted media asset",
+                mimeType: mimeType,
+                fileSize: calculatedSize
+              };
+              currentFiles.push(newFileEntry);
+              await saveResource("files", currentFiles);
+              console.log("[Cloudinary DB Sync] Saved new Cloudinary media record to MongoDB 'files' collection.");
+            } catch (dbErr) {
+              console.error("[Cloudinary DB Sync] Failed to register file record in 'files' collection:", dbErr);
             }
           }
         }
-      } catch (err) {
-        console.warn("[ImgBB Proxy] Exception during ImgBB upload check (falling back to MongoDB):", err);
+      } catch (err: any) {
+        console.warn("[Cloudinary Proxy] Exception during Cloudinary upload (falling back to local/MDB):", err);
       }
 
-      if (imgbbUrl) {
-        return res.json({ url: imgbbUrl, id: `imgbb-${Date.now()}` });
+      if (cloudinaryUrl) {
+        return res.json({ url: cloudinaryUrl, id: `cloud-${Date.now()}` });
       }
 
       const id = `img-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
