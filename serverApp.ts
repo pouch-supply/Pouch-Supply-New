@@ -38,15 +38,30 @@ export async function createExpressApp() {
 
 
   // Serves /uploads with lazy loading fallback from MongoDB Atlas!
-  const uploadsPath = path.join(process.cwd(), "uploads");
-  if (!fs.existsSync(uploadsPath)) {
-    fs.mkdirSync(uploadsPath, { recursive: true });
+  let uploadsPath = path.join(process.cwd(), "uploads");
+  try {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      uploadsPath = "/tmp/uploads";
+    }
+    if (!fs.existsSync(uploadsPath)) {
+      fs.mkdirSync(uploadsPath, { recursive: true });
+    }
+  } catch (err) {
+    console.warn("[Uploads Setup] Failed to create uploads directory at", uploadsPath, ". Falling back to /tmp/uploads", err);
+    uploadsPath = "/tmp/uploads";
+    try {
+      if (!fs.existsSync(uploadsPath)) {
+        fs.mkdirSync(uploadsPath, { recursive: true });
+      }
+    } catch (tmpErr) {
+      console.error("[Uploads Setup] Fatal: failed to create /tmp/uploads:", tmpErr);
+    }
   }
 
   app.get("/uploads/:filename", async (req, res, next) => {
     try {
       const filename = req.params.filename;
-      const filePath = path.join(process.cwd(), "uploads", filename);
+      const filePath = path.join(uploadsPath, filename);
       
       if (fs.existsSync(filePath)) {
         return res.sendFile(filePath);

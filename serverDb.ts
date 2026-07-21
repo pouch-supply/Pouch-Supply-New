@@ -279,7 +279,10 @@ export async function getUploadedImage(id: string): Promise<{ base64Data: string
 
   // 2. Check local uploads folder on disk as a tertiary fallback for older local images
   try {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    let uploadsDir = path.join(process.cwd(), 'uploads');
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      uploadsDir = '/tmp/uploads';
+    }
     if (fs.existsSync(uploadsDir)) {
       const files = fs.readdirSync(uploadsDir);
       const matchedFile = files.find(f => f.startsWith(id + '.'));
