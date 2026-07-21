@@ -150,14 +150,49 @@ let connectPromise: Promise<typeof mongoose | null> | null = null;
 let lastConnectErrorTime = 0;
 const CONNECT_COOLDOWN = 15000; // 15 seconds cool down
 
+// Register connection event listeners to handle background disconnects and errors gracefully without unhandled crashes
+mongoose.connection.on('connected', () => {
+  console.log('[Mongoose Connection Event]: Connected to MongoDB.');
+  lastConnectionStatus = { status: 'connected' };
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('[Mongoose Connection Event]: Disconnected from MongoDB.');
+  if (lastConnectionStatus.status === 'connected') {
+    lastConnectionStatus = { status: 'pending' };
+  }
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('[Mongoose Connection Event]: Error:', err);
+  const errorStr = String(err?.stack || err?.message || err || "");
+  lastConnectionStatus = {
+    status: 'error',
+    error: errorStr
+  };
+});
+
 export function getMongooseStatus(): DbStatus {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     return { status: 'not-configured' };
   }
   const host = getHostFromUri(uri);
+  
+  // Align status with readyState in real time
+  const readyState = mongoose.connection.readyState;
+  let status = lastConnectionStatus.status;
+  if (readyState === 1) {
+    status = 'connected';
+  } else if (readyState === 2) {
+    status = 'pending';
+  } else if (readyState === 0 && lastConnectionStatus.status === 'connected') {
+    status = 'pending';
+  }
+
   return {
     ...lastConnectionStatus,
+    status,
     uriHost: host || undefined
   };
 }

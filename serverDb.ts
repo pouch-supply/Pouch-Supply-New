@@ -102,17 +102,19 @@ export async function getDatabaseDetails(): Promise<any> {
       models: Object.keys(mongoose.models),
     };
 
-    if (readyState === 1 && mongoose.connection.db) {
+    if (readyState === 1 && mongoose.connection.db && typeof mongoose.connection.db.listCollections === 'function') {
       try {
         const db = mongoose.connection.db;
         const collectionsList = await db.listCollections().toArray();
         const collectionsInfo = [];
         for (const col of collectionsList) {
-          const count = await db.collection(col.name).countDocuments();
-          collectionsInfo.push({
-            name: col.name,
-            count
-          });
+          if (col && col.name) {
+            const count = await db.collection(col.name).countDocuments();
+            collectionsInfo.push({
+              name: col.name,
+              count
+            });
+          }
         }
         details.collections = collectionsInfo;
       } catch (err: any) {
