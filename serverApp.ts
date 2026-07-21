@@ -148,7 +148,40 @@ export async function createExpressApp() {
       }
 
       const id = `img-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-      const imageUrl = await saveUploadedImage(id, base64String, mimeType);
+      
+      // Determine correct file extension from mimeType
+      let extension = "png";
+      if (mimeType.includes("jpeg") || mimeType.includes("jpg")) {
+        extension = "jpg";
+      } else if (mimeType.includes("gif")) {
+        extension = "gif";
+      } else if (mimeType.includes("webp")) {
+        extension = "webp";
+      } else if (mimeType.includes("mp4")) {
+        extension = "mp4";
+      } else if (mimeType.includes("webm")) {
+        extension = "webm";
+      } else if (mimeType.includes("ogg")) {
+        extension = "ogg";
+      } else if (mimeType.includes("svg")) {
+        extension = "svg";
+      }
+
+      // Save locally to disk for instant static serving (which natively supports HTTP Range Requests / video seeking)
+      const filenameOnDisk = `${id}.${extension}`;
+      const filePath = path.join(uploadsPath, filenameOnDisk);
+      try {
+        fs.writeFileSync(filePath, Buffer.from(base64String, "base64"));
+        console.log(`[API Upload] Successfully saved file to disk: ${filePath}`);
+      } catch (fsErr) {
+        console.error("[API Upload] Failed to write file to local disk:", fsErr);
+      }
+
+      // Sync to MongoDB Atlas for persistence
+      await saveUploadedImage(id, base64String, mimeType);
+      
+      // Return the static uploads url which supports byte ranges for videos
+      const imageUrl = `/uploads/${filenameOnDisk}`;
       
       // Convert to absolute URL
       let absoluteUrl = imageUrl;
@@ -158,7 +191,7 @@ export async function createExpressApp() {
         absoluteUrl = `${protocol}://${host}${imageUrl}`;
       }
 
-      console.log(`[API Upload] Successfully persisted ${mimeType} image. Absolute URL: ${absoluteUrl}`);
+      console.log(`[API Upload] Successfully persisted ${mimeType} media. Absolute URL: ${absoluteUrl}`);
       res.json({ url: absoluteUrl, id });
     } catch (err: any) {
       console.error("[API Upload] Fail:", err);
