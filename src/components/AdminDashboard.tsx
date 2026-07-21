@@ -7682,11 +7682,25 @@ export default function AdminDashboard({
               <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-sm w-full shadow-2xl animate-scale">
                   <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-                    <h3 className="font-extrabold text-slate-800 text-sm">Upload Mock File Link</h3>
+                    <h3 className="font-extrabold text-slate-800 text-sm">Upload & Host Image Asset</h3>
                     <button onClick={() => setShowAddFile(false)} className="text-slate-400 hover:text-slate-650 cursor-pointer text-xs font-bold">Close</button>
                   </div>
 
                   <form onSubmit={handleAddFileSubmit} className="space-y-4 text-xs">
+                    <div>
+                      <ImageUploadInput
+                        label="Direct Drag & Drop / Select Image File"
+                        value={newFileForm.url}
+                        onChange={(uploadedUrl) => {
+                          setNewFileForm(prev => ({
+                            ...prev,
+                            url: uploadedUrl,
+                            fileName: prev.fileName || `uploaded_asset_${Date.now()}.png`
+                          }));
+                        }}
+                      />
+                    </div>
+
                     <div>
                       <label className="block font-bold text-slate-600 uppercase tracking-widest text-[9px] mb-1">File Name</label>
                       <input
@@ -7712,7 +7726,7 @@ export default function AdminDashboard({
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-slate-600 uppercase tracking-widest text-[9px] mb-1">Image Cloud Asset URL</label>
+                      <label className="block font-bold text-slate-600 uppercase tracking-widest text-[9px] mb-1">Image Cloud Asset URL (Manual Override)</label>
                       <input
                         id="file-form-url"
                         type="text"
