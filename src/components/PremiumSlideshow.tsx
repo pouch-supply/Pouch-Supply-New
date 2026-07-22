@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 
 interface Slide {
   title: string;
@@ -97,10 +98,14 @@ export default function PremiumSlideshow({
               {/* Background cover image with sleek gradient overlay */}
               <div className="absolute inset-0">
                 <img
-                  src={slide.imageUrl || '/placeholder.png'}
+                  src={cleanMediaUrl(slide.imageUrl) || '/placeholder.png'}
                   alt={slide.title}
                   className="w-full h-full object-cover transition-transform duration-10000 ease-linear scale-100 group-hover:scale-102"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/placeholder.png';
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/60 to-transparent sm:block hidden" />
                 <div className="absolute inset-0 bg-slate-950/75 sm:hidden" /> {/* Stronger dark overlay on mobile */}

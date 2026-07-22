@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Customer, CartItem, Product, Collection, LayoutSettings } from '../types';
 import { ShoppingCart, Heart, User, Sparkles, LayoutDashboard, Menu, Store, Phone, HelpCircle, Search, X, ChevronRight, Home, ShoppingBag, Award, Info } from 'lucide-react';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 
 interface HeaderProps {
   currentTab: string;
@@ -177,10 +178,14 @@ export default function Header({
         >
           {layoutSettings?.headerLogoImage ? (
             <img 
-              src={layoutSettings.headerLogoImage} 
+              src={cleanMediaUrl(layoutSettings.headerLogoImage)} 
               className="max-h-11 max-w-[150px] object-contain rounded-md transition-transform group-hover:scale-102" 
               alt={layoutSettings?.headerLogoText || 'Pouch Supply'} 
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.style.display = 'none';
+              }}
             />
           ) : (
             <>
@@ -324,10 +329,14 @@ export default function Header({
               <div className="flex items-center gap-2">
                 {layoutSettings?.headerLogoImage ? (
                   <img 
-                    src={layoutSettings.headerLogoImage} 
+                    src={cleanMediaUrl(layoutSettings.headerLogoImage)} 
                     className="max-h-8 max-w-[100px] object-contain rounded" 
                     alt="Logo" 
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <>

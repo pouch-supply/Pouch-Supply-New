@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ShieldCheck, Truck, RefreshCw, Sparkles, HelpCircle, ArrowRight } from 'lucide-react';
 import { LayoutSettings } from '../types';
 import { klaviyoTrackNewsletterSubscribe } from '../utils/klaviyo';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 
 interface FooterProps {
   onNavigate?: (tab: string) => void;
@@ -127,10 +128,14 @@ export default function Footer({ onNavigate, layoutSettings }: FooterProps) {
           <div className="flex items-center gap-2">
             {layoutSettings?.footerLogoImage ? (
               <img 
-                src={layoutSettings.footerLogoImage} 
+                src={cleanMediaUrl(layoutSettings.footerLogoImage)} 
                 className="max-h-10 max-w-[150px] object-contain rounded" 
                 alt="Footer Logo" 
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             ) : (
               <>

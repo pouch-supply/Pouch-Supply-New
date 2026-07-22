@@ -106,10 +106,14 @@ function BrandsWeOfferSection({ sec, handleLinkClick }: BrandsWeOfferSectionProp
             >
               {b.imageUrl ? (
                 <img 
-                  src={b.imageUrl} 
+                  src={cleanMediaUrl(b.imageUrl)} 
                   className="max-h-24 max-w-[140px] object-contain transition-transform duration-300 group-hover:scale-105" 
                   alt={b.title || 'Brand'} 
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               ) : (
                 <span className="text-sm font-black text-slate-800 uppercase tracking-tight truncate max-w-full group-hover:scale-105 transition-transform duration-300">
@@ -312,10 +316,14 @@ function PlansSection({ sec, handleLinkClick }: PlansSectionProps) {
                   <div className="relative h-44 w-full bg-transparent overflow-hidden flex items-center justify-center p-2">
                     {plan.imageUrl ? (
                       <img 
-                        src={plan.imageUrl} 
+                        src={cleanMediaUrl(plan.imageUrl)} 
                         alt={plan.name} 
                         className="w-full h-full object-contain pointer-events-none rounded-xl"
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.png';
+                        }}
                       />
                     ) : (
                       <PlansCanOverlay type={plan.slug} className="w-full h-full bg-transparent border-0 shadow-none p-0" />
@@ -427,10 +435,14 @@ function HowItWorksSection({ sec, handleLinkClick }: HowItWorksSectionProps) {
       return (
         <div className="w-full my-4 flex items-center justify-center overflow-hidden rounded-xl">
           <img 
-            src={step.imageUrl} 
+            src={cleanMediaUrl(step.imageUrl)} 
             className="w-full max-h-60 object-contain filter drop-shadow-md group-hover:scale-[1.03] transition-transform duration-500" 
             alt={step.title} 
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder.png';
+            }}
           />
         </div>
       );
@@ -590,10 +602,14 @@ function HowItWorksSection({ sec, handleLinkClick }: HowItWorksSectionProps) {
       <div className="mt-8 w-36 h-36 flex items-center justify-center bg-slate-50/50 rounded-2xl p-4 shrink-0 border border-slate-100/50 group-hover:border-slate-200 group-hover:bg-white transition-all duration-300">
         {step.imageUrl ? (
           <img 
-            src={step.imageUrl} 
+            src={cleanMediaUrl(step.imageUrl)} 
             className="max-h-28 max-w-full object-contain filter drop-shadow-sm group-hover:scale-105 transition-transform duration-300" 
             alt={step.title} 
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder.png';
+            }}
           />
         ) : (
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">No Image Asset</span>
@@ -897,10 +913,14 @@ function ClearanceSaleSection({
                   {/* Image */}
                   <div className="w-full h-56 bg-transparent overflow-hidden relative flex items-center justify-center p-1">
                     <img
-                      src={prod.image}
+                      src={cleanMediaUrl(prod.image) || '/placeholder.png'}
                       className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       alt={prod.title}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder.png';
+                      }}
                     />
                     
                     <span className="absolute bottom-2.5 left-2.5 bg-rose-600 text-white text-[8px] font-black tracking-widest uppercase py-0.5 px-2 rounded">
@@ -1195,10 +1215,14 @@ function FeaturedCollectionSection({
                   {/* Image takes 55%+ of height, dominates card */}
                   <div className="w-full h-56 bg-transparent overflow-hidden relative flex items-center justify-center p-1">
                     <img
-                      src={prod.image}
+                      src={cleanMediaUrl(prod.image) || '/placeholder.png'}
                       className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       alt={prod.title}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder.png';
+                      }}
                     />
                     
                     {prod.compareAtPrice > prod.price && (
@@ -1431,10 +1455,14 @@ export default function PageRenderer({
                       {/* Background Image & Overlay */}
                       <div className="absolute inset-0 z-0">
                         <img
-                          src={sec.settings.imageUrl || '/placeholder.png'}
+                          src={cleanMediaUrl(sec.settings.imageUrl) || '/placeholder.png'}
                           alt={sec.settings.title || 'Brand Banner'}
                           className="w-full h-full object-cover origin-center scale-100 hover:scale-102 transition-transform duration-10000"
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/placeholder.png';
+                          }}
                         />
                         {/* Dual protectant layer */}
                         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/65 to-transparent sm:block hidden" />
@@ -1518,10 +1546,14 @@ export default function PageRenderer({
 
                       <div className="relative group overflow-hidden rounded-2xl border border-slate-200/80 shadow-lg aspect-4/3 md:aspect-square">
                         <img
-                          src={sec.settings.imageUrl || '/placeholder.png'}
+                          src={cleanMediaUrl(sec.settings.imageUrl) || '/placeholder.png'}
                           alt={sec.settings.title || 'Banner Media'}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-103"
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/placeholder.png';
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                       </div>
@@ -1754,10 +1786,14 @@ export default function PageRenderer({
                       <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-indigo-500 rounded-3xl blur opacity-15 group-hover:opacity-20 transition duration-500" />
                       <div className="relative h-72 sm:h-96 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-slate-50">
                         <img
-                          src={sec.settings.imageUrl || '/placeholder.png'}
+                          src={cleanMediaUrl(sec.settings.imageUrl) || '/placeholder.png'}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-102"
                           alt=""
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/placeholder.png';
+                          }}
                         />
                       </div>
                     </div>
@@ -1817,7 +1853,16 @@ export default function PageRenderer({
                         <div key={cIdx} className="bg-white border border-slate-100 rounded-2xl overflow-hidden p-4 space-y-4 shadow-sm hover:shadow-xl hover:border-slate-300/60 transition-all group flex flex-col justify-between">
                           <div className="space-y-3">
                             <div className="relative h-44 w-full rounded-xl overflow-hidden bg-slate-50">
-                              <img src={col.img} className="h-full w-full object-cover group-hover:scale-102 transition-transform duration-300" alt="" referrerPolicy="no-referrer" />
+                              <img 
+                                src={cleanMediaUrl(col.img) || '/placeholder.png'} 
+                                className="h-full w-full object-cover group-hover:scale-102 transition-transform duration-300" 
+                                alt="" 
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = '/placeholder.png';
+                                }}
+                              />
                               <span className="absolute bottom-2 left-2 bg-slate-900/90 text-white text-[8px] font-bold py-0.5 px-2 rounded tracking-widest">{col.badge}</span>
                             </div>
                             <h4 className="font-extrabold text-slate-800 text-sm">{col.title}</h4>
@@ -1911,7 +1956,16 @@ export default function PageRenderer({
                       {allProducts.slice(0, 6).map(prod => (
                         <div key={prod.id} className="w-28 shrink-0 bg-white border border-slate-100 p-2 rounded-xl text-center shadow-xs hover:shadow-md transition-shadow group">
                           <div className="h-20 w-20 bg-slate-50 hover:bg-slate-100 rounded-lg overflow-hidden mx-auto flex items-center justify-center transition-all">
-                            <img src={prod.image} className="h-full w-full object-cover group-hover:scale-105 transition-transform" alt="" referrerPolicy="no-referrer" />
+                            <img 
+                              src={cleanMediaUrl(prod.image) || '/placeholder.png'} 
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform" 
+                              alt="" 
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/placeholder.png';
+                              }}
+                            />
                           </div>
                           <p className="text-[9.5px] font-black truncate text-slate-800 mt-2.5">{prod.title.split(' ')[0]}</p>
                           <p className="text-[8px] font-bold text-slate-400">{prod.vendor}</p>
@@ -1980,10 +2034,14 @@ export default function PageRenderer({
                              <div className="h-24 bg-slate-50 group-hover:bg-slate-100 rounded-xl flex items-center justify-center mb-4 transition-colors overflow-hidden relative">
                                {col.image ? (
                                  <img 
-                                   src={col.image} 
+                                   src={cleanMediaUrl(col.image)} 
                                    className="h-full w-full object-cover transform group-hover:scale-105 transition-transform" 
                                    alt={col.title}
                                    referrerPolicy="no-referrer"
+                                   onError={(e) => {
+                                     e.currentTarget.onerror = null;
+                                     e.currentTarget.src = '/placeholder.png';
+                                   }}
                                  />
                                ) : (
                                  <span className="text-4xl transform group-hover:scale-108 transition-transform">🥫</span>
@@ -2181,7 +2239,16 @@ export default function PageRenderer({
                         'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80'
                       ].map((imgUrl, galIdx) => (
                         <div key={galIdx} className="h-44 rounded-2xl overflow-hidden border border-slate-150 shadow-sm relative group bg-slate-50">
-                          <img src={imgUrl} className="h-full w-full object-cover hover:scale-103 transition-transform duration-500" alt="" referrerPolicy="no-referrer" />
+                          <img 
+                            src={cleanMediaUrl(imgUrl) || '/placeholder.png'} 
+                            className="h-full w-full object-cover hover:scale-103 transition-transform duration-500" 
+                            alt="" 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/placeholder.png';
+                            }}
+                          />
                           <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="bg-white/90 backdrop-blur-xs text-[9px] font-black uppercase tracking-widest py-1 px-3.5 text-slate-900 rounded-lg shadow-sm">View Facility</span>
                           </div>
@@ -2298,10 +2365,14 @@ export default function PageRenderer({
                           >
                             <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-50 relative">
                               <img 
-                                src={b.image || '/placeholder.png'} 
+                                src={cleanMediaUrl(b.image) || '/placeholder.png'} 
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                                 alt=""
                                 referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = '/placeholder.png';
+                                }}
                               />
                               <div className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-xs text-[9px] font-black uppercase px-2.5 py-1 rounded-md text-indigo-650 border border-slate-100 shadow-sm">
                                 {b.category || 'Article'}
@@ -2359,10 +2430,14 @@ export default function PageRenderer({
                           {/* Image Layer */}
                           {b.imageUrl ? (
                             <img 
-                              src={b.imageUrl} 
+                              src={cleanMediaUrl(b.imageUrl)} 
                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-106 transition-transform duration-700 ease-out" 
                               alt={b.title} 
                               referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           ) : (
                             <div className="absolute inset-0 bg-gradient-to-tr from-slate-100 to-slate-200 flex items-center justify-center">
