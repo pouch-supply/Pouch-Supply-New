@@ -206,8 +206,7 @@ function checkAndResetOnNetworkError(error: any) {
     errorStr.includes("ETIMEDOUT") ||
     errorStr.includes("Topology")
   ) {
-    console.warn(`[Mongoose Engine] Network/SSL alert detected (${error?.name || 'Error'}). Resetting connection pool.`);
-    resetConnection();
+    console.warn(`[Mongoose Engine] Transient network event detected (${error?.name || 'Error'}): ${error?.message || 'Reconnecting'}`);
   }
 }
 

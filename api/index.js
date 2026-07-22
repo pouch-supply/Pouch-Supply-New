@@ -285,17 +285,19 @@ mongoose.connection.on("connected", () => {
   lastConnectionStatus = { status: "connected" };
 });
 mongoose.connection.on("disconnected", () => {
-  console.warn("[Mongoose Connection Event]: Disconnected from MongoDB.");
+  console.log("[Mongoose Connection Event]: Disconnected from MongoDB (socket recycling or reconnecting).");
   if (lastConnectionStatus.status === "connected") {
     lastConnectionStatus = { status: "pending" };
   }
 });
 mongoose.connection.on("error", (err) => {
-  console.error("[Mongoose Connection Event]: Error:", err);
   const errorStr = String(err?.stack || err?.message || err || "");
+  const isSsl = errorStr.includes("ssl") || errorStr.includes("SSL") || errorStr.includes("alert number 80") || errorStr.includes("ERR_SSL_");
+  console.log(`[Mongoose Connection Event]: Socket event handled (${isSsl ? "SSL alert / idle reconnect" : err?.message || "reset"}).`);
   lastConnectionStatus = {
-    status: "error",
-    error: errorStr
+    status: isSsl ? "pending" : "error",
+    error: errorStr,
+    isSslAlert: isSsl
   };
 });
 function getMongooseStatus() {
@@ -347,8 +349,15 @@ async function connectMongoose() {
   connectPromise = (async () => {
     try {
       const conn = await mongoose.connect(escapedUri, {
-        serverSelectionTimeoutMS: 3e3,
-        connectTimeoutMS: 4e3
+        serverSelectionTimeoutMS: 5e3,
+        connectTimeoutMS: 5e3,
+        socketTimeoutMS: 45e3,
+        maxIdleTimeMS: 1e4,
+        maxPoolSize: 10,
+        minPoolSize: 0,
+        autoIndex: false,
+        retryWrites: true,
+        retryReads: true
       });
       lastConnectionStatus = { status: "connected" };
       return conn;
@@ -382,8 +391,15 @@ var memoryCache = {
   customPages: [...DEFAULT_PAGES],
   blogs: [...INITIAL_BLOGS]
 };
+function normalizeResourceName(resource) {
+  if (!resource) return resource;
+  const lower = resource.toLowerCase();
+  if (lower === "custompages") return "customPages";
+  return resource;
+}
 function getModelForResource(resource) {
-  switch (resource) {
+  const norm = normalizeResourceName(resource);
+  switch (norm) {
     case "products":
       return ProductModel;
     case "collections":
@@ -397,7 +413,6 @@ function getModelForResource(resource) {
     case "discounts":
       return DiscountModel;
     case "customPages":
-    case "custompages":
       return CustomPageModel;
     case "blogs":
       return BlogModel;
@@ -534,11 +549,19 @@ async function getDb() {
   }
   return null;
 }
+function checkAndResetOnNetworkError(error) {
+  if (!error) return;
+  const errorStr = String(error?.stack || error?.message || error || "");
+  if (errorStr.includes("MongoNetworkError") || errorStr.includes("SSL") || errorStr.includes("ssl") || errorStr.includes("tls") || errorStr.includes("alert number 80") || errorStr.includes("ECONNRESET") || errorStr.includes("ETIMEDOUT") || errorStr.includes("Topology")) {
+    console.warn(`[Mongoose Engine] Transient network event detected (${error?.name || "Error"}): ${error?.message || "Reconnecting"}`);
+  }
+}
 async function fetchResource(resource) {
+  const normResource = normalizeResourceName(resource);
   const mongoUri = process.env.MONGODB_URI;
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource);
+    const Model = getModelForResource(normResource);
     if (conn && Model) {
       const docs = await Model.find({}).lean().exec();
       return docs.map((doc) => {
@@ -546,40 +569,119 @@ async function fetchResource(resource) {
         return cleanDoc;
       });
     } else if (mongoUri) {
-      console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${resource}".`);
+      console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${normResource}".`);
     }
   } catch (error) {
-    console.error(`[fetchResource] Error fetching "${resource}", falling back to memoryCache:`, error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[fetchResource] Database fetch for "${normResource}" unavailable (${error?.message || "Network/SSL error"}), falling back to memoryCache.`);
   }
-  return memoryCache[resource] || [];
+  return memoryCache[normResource] || memoryCache[resource] || [];
 }
 async function saveResource(resource, list) {
-  memoryCache[resource] = [...list];
+  const normResource = normalizeResourceName(resource);
+  memoryCache[normResource] = [...list];
+  if (normResource !== resource) {
+    memoryCache[resource] = memoryCache[normResource];
+  }
   const mongoUri = process.env.MONGODB_URI;
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource);
+    const Model = getModelForResource(normResource);
     if (conn && Model) {
       const currentIds = list.map((item) => item.id).filter(Boolean);
-      console.log(`[saveResource] Syncing ${resource} collection. Total items in payload: ${list.length}. Active IDs:`, currentIds);
+      console.log(`[saveResource] Syncing ${normResource} collection. Total items in payload: ${list.length}. Active IDs:`, currentIds);
       const deleteResult = await Model.deleteMany({ id: { $nin: currentIds } });
       if (deleteResult.deletedCount > 0) {
-        console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${resource} not in active client list.`);
+        console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${normResource} not in active client list.`);
       }
       for (const item of list) {
         if (!item.id) continue;
         const { _id, __v, ...cleanItem } = item;
         await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
       }
-      console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${resource} collection.`);
+      console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;
     } else if (mongoUri) {
-      console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${resource}".`);
+      console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${normResource}".`);
     }
   } catch (error) {
-    console.error(`[saveResource] Error during database synchronization for "${resource}", saved to memoryCache fallback:`, error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[saveResource] Error during database synchronization for "${normResource}" (${error?.message || "Network/SSL error"}), saved to memoryCache fallback.`);
   }
-  return memoryCache[resource];
+  return memoryCache[normResource];
+}
+async function fetchSingleItem(resource, id) {
+  const normResource = normalizeResourceName(resource);
+  try {
+    const conn = await connectMongoose();
+    const Model = getModelForResource(normResource);
+    if (conn && Model) {
+      const doc = await Model.findOne({ id }).lean().exec();
+      if (doc) {
+        const { _id, __v, ...cleanDoc } = doc;
+        return cleanDoc;
+      }
+      return null;
+    }
+  } catch (err) {
+    checkAndResetOnNetworkError(err);
+    console.warn(`[fetchSingleItem] Error fetching "${normResource}" item ${id}:`, err?.message || err);
+  }
+  const items = memoryCache[normResource] || memoryCache[resource] || [];
+  return items.find((i) => i.id === id) || null;
+}
+async function saveSingleItem(resource, item) {
+  if (!item || !item.id) {
+    throw new Error("Item must have a valid 'id' field");
+  }
+  const normResource = normalizeResourceName(resource);
+  const items = memoryCache[normResource] || memoryCache[resource] || [];
+  const existingIdx = items.findIndex((i) => i.id === item.id);
+  if (existingIdx !== -1) {
+    items[existingIdx] = { ...item };
+  } else {
+    items.push({ ...item });
+  }
+  memoryCache[normResource] = items;
+  if (normResource !== resource) {
+    memoryCache[resource] = items;
+  }
+  try {
+    const conn = await connectMongoose();
+    const Model = getModelForResource(normResource);
+    if (conn && Model) {
+      const { _id, __v, ...cleanItem } = item;
+      await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
+      console.log(`[saveSingleItem] Upserted item ${item.id} into "${normResource}" collection.`);
+    }
+  } catch (err) {
+    checkAndResetOnNetworkError(err);
+    console.warn(`[saveSingleItem] Error saving item ${item.id} to "${normResource}":`, err?.message || err);
+  }
+  return item;
+}
+async function deleteSingleItem(resource, id) {
+  if (!id) return false;
+  const normResource = normalizeResourceName(resource);
+  if (memoryCache[normResource]) {
+    memoryCache[normResource] = memoryCache[normResource].filter((i) => i.id !== id);
+  }
+  if (normResource !== resource && memoryCache[resource]) {
+    memoryCache[resource] = memoryCache[resource].filter((i) => i.id !== id);
+  }
+  try {
+    const conn = await connectMongoose();
+    const Model = getModelForResource(normResource);
+    if (conn && Model) {
+      const res = await Model.deleteOne({ id });
+      console.log(`[deleteSingleItem] Deleted item ${id} from "${normResource}" collection. Deleted count: ${res.deletedCount}`);
+      return res.deletedCount > 0;
+    }
+  } catch (err) {
+    checkAndResetOnNetworkError(err);
+    console.warn(`[deleteSingleItem] Error deleting item ${id} from "${normResource}":`, err?.message || err);
+  }
+  return true;
 }
 var memoryImages = {};
 function sanitizeBase64(raw) {
@@ -616,7 +718,8 @@ async function saveUploadedImage(id, base64Data, mimeType) {
       console.log(`[MongoDB Sync] Successfully saved image to Atlas database for ID: ${id}`);
     }
   } catch (error) {
-    console.error("[Mongoose Engine] Failed to save uploaded image in DB:", error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[Mongoose Engine] Failed to save uploaded image in DB (${error?.message || "Network/SSL error"}), stored in memory fallback.`);
   }
   return `/api/images/${id}`;
 }
@@ -674,7 +777,8 @@ async function getUploadedImage(id) {
       }
     }
   } catch (error) {
-    console.error("[Mongoose Engine] Failed to load image from DB:", error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[Mongoose Engine] Failed to load image from DB (${error?.message || "Network/SSL error"}), checking local cache.`);
   }
   return null;
 }
@@ -722,7 +826,8 @@ async function fetchLayoutSettings() {
       return seedSettings;
     }
   } catch (error) {
-    console.error("[serverDb] Failed to fetch layout settings from DB, falling back to local file:", error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[serverDb] Failed to fetch layout settings from DB (${error?.message || "Network/SSL error"}), falling back to local file.`);
   }
   const filePath = path.join(process.cwd(), "layout_settings.json");
   if (fs.existsSync(filePath)) {
@@ -752,80 +857,109 @@ async function saveLayoutSettings(settings) {
       console.log("[serverDb] Successfully saved layout settings to MongoDB.");
     }
   } catch (error) {
-    console.error("[serverDb] Failed to save layout settings to DB:", error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[serverDb] Failed to save layout settings to DB (${error?.message || "Network/SSL error"}), saved to local file fallback.`);
   }
   return payload;
 }
 
-// backend/routes/products.ts
+// backend/routes/crudHelper.ts
 import { Router } from "express";
-var router = Router();
-router.get("/", async (req, res) => {
-  try {
-    const data = await fetchResource("products");
-    res.json(data);
-  } catch (err) {
-    console.error("[Products Router] GET Error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch products" });
-  }
-});
-router.post("/", async (req, res) => {
-  try {
-    const payload = req.body;
-    if (!Array.isArray(payload)) {
-      return res.status(400).json({ error: "Products API expects an array of documents" });
+function createCrudRouter(resourceName) {
+  const router11 = Router();
+  router11.get("/", async (req, res) => {
+    try {
+      const data = await fetchResource(resourceName);
+      res.json(data);
+    } catch (err) {
+      console.error(`[${resourceName} Router] GET Error:`, err);
+      res.status(500).json({ error: err.message || `Failed to fetch ${resourceName}` });
     }
-    const database = await getDb();
-    if (!database) {
-      res.setHeader("X-Database-Offline", "true");
-    } else {
-      res.setHeader("X-Database-Offline", "false");
+  });
+  router11.get("/:id", async (req, res) => {
+    try {
+      const item = await fetchSingleItem(resourceName, req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: `Item with ID ${req.params.id} not found` });
+      }
+      res.json(item);
+    } catch (err) {
+      console.error(`[${resourceName} Router] GET /:id Error:`, err);
+      res.status(500).json({ error: err.message || `Failed to fetch ${resourceName} item` });
     }
-    const updated = await saveResource("products", payload);
-    res.json(updated);
-  } catch (err) {
-    console.error("[Products Router] POST Error:", err);
-    res.status(500).json({ error: err.message || "Failed to persist products" });
-  }
-});
+  });
+  router11.post("/", async (req, res) => {
+    try {
+      const payload = req.body;
+      const database = await getDb();
+      if (!database) {
+        res.setHeader("X-Database-Offline", "true");
+      } else {
+        res.setHeader("X-Database-Offline", "false");
+      }
+      if (Array.isArray(payload)) {
+        const updated = await saveResource(resourceName, payload);
+        return res.json(updated);
+      } else if (payload && typeof payload === "object") {
+        const updatedItem = await saveSingleItem(resourceName, payload);
+        return res.json(updatedItem);
+      } else {
+        return res.status(400).json({ error: "Invalid payload for POST operation" });
+      }
+    } catch (err) {
+      console.error(`[${resourceName} Router] POST Error:`, err);
+      res.status(500).json({ error: err.message || `Failed to persist ${resourceName}` });
+    }
+  });
+  router11.put("/:id", async (req, res) => {
+    try {
+      const payload = req.body;
+      if (!payload || typeof payload !== "object") {
+        return res.status(400).json({ error: "Invalid item payload" });
+      }
+      const itemToSave = { ...payload, id: req.params.id };
+      const database = await getDb();
+      if (!database) {
+        res.setHeader("X-Database-Offline", "true");
+      } else {
+        res.setHeader("X-Database-Offline", "false");
+      }
+      const updated = await saveSingleItem(resourceName, itemToSave);
+      res.json(updated);
+    } catch (err) {
+      console.error(`[${resourceName} Router] PUT /:id Error:`, err);
+      res.status(500).json({ error: err.message || `Failed to update ${resourceName} item` });
+    }
+  });
+  router11.delete("/:id", async (req, res) => {
+    try {
+      const database = await getDb();
+      if (!database) {
+        res.setHeader("X-Database-Offline", "true");
+      } else {
+        res.setHeader("X-Database-Offline", "false");
+      }
+      const success = await deleteSingleItem(resourceName, req.params.id);
+      res.json({ success, id: req.params.id });
+    } catch (err) {
+      console.error(`[${resourceName} Router] DELETE /:id Error:`, err);
+      res.status(500).json({ error: err.message || `Failed to delete ${resourceName} item` });
+    }
+  });
+  return router11;
+}
+
+// backend/routes/products.ts
+var router = createCrudRouter("products");
 var products_default = router;
 
 // backend/routes/collections.ts
-import { Router as Router2 } from "express";
-var router2 = Router2();
-router2.get("/", async (req, res) => {
-  try {
-    const data = await fetchResource("collections");
-    res.json(data);
-  } catch (err) {
-    console.error("[Collections Router] GET Error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch collections" });
-  }
-});
-router2.post("/", async (req, res) => {
-  try {
-    const payload = req.body;
-    if (!Array.isArray(payload)) {
-      return res.status(400).json({ error: "Collections API expects an array of documents" });
-    }
-    const database = await getDb();
-    if (!database) {
-      res.setHeader("X-Database-Offline", "true");
-    } else {
-      res.setHeader("X-Database-Offline", "false");
-    }
-    const updated = await saveResource("collections", payload);
-    res.json(updated);
-  } catch (err) {
-    console.error("[Collections Router] POST Error:", err);
-    res.status(500).json({ error: err.message || "Failed to persist collections" });
-  }
-});
+var router2 = createCrudRouter("collections");
 var collections_default = router2;
 
 // backend/routes/orders.ts
-import { Router as Router3 } from "express";
-var router3 = Router3();
+import { Router as Router2 } from "express";
+var router3 = Router2();
 router3.get("/", async (req, res) => {
   try {
     const data = await fetchResource("orders");
@@ -857,8 +991,8 @@ router3.post("/", async (req, res) => {
 var orders_default = router3;
 
 // backend/routes/files.ts
-import { Router as Router4 } from "express";
-var router4 = Router4();
+import { Router as Router3 } from "express";
+var router4 = Router3();
 router4.get("/", async (req, res) => {
   try {
     const data = await fetchResource("files");
@@ -890,9 +1024,9 @@ router4.post("/", async (req, res) => {
 var files_default = router4;
 
 // backend/routes/customers.ts
-import { Router as Router5 } from "express";
+import { Router as Router4 } from "express";
 import crypto from "crypto";
-var router5 = Router5();
+var router5 = Router4();
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password + "pouch_supply_salt_123!").digest("hex");
 }
@@ -1084,8 +1218,8 @@ router5.post("/admin-login", async (req, res) => {
 var customers_default = router5;
 
 // backend/routes/discounts.ts
-import { Router as Router6 } from "express";
-var router6 = Router6();
+import { Router as Router5 } from "express";
+var router6 = Router5();
 router6.get("/", async (req, res) => {
   try {
     const data = await fetchResource("discounts");
@@ -1117,41 +1251,12 @@ router6.post("/", async (req, res) => {
 var discounts_default = router6;
 
 // backend/routes/customPages.ts
-import { Router as Router7 } from "express";
-var router7 = Router7();
-router7.get("/", async (req, res) => {
-  try {
-    const data = await fetchResource("customPages");
-    res.json(data);
-  } catch (err) {
-    console.error("[CustomPages Router] GET Error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch custom pages" });
-  }
-});
-router7.post("/", async (req, res) => {
-  try {
-    const payload = req.body;
-    if (!Array.isArray(payload)) {
-      return res.status(400).json({ error: "CustomPages API expects an array of documents" });
-    }
-    const database = await getDb();
-    if (!database) {
-      res.setHeader("X-Database-Offline", "true");
-    } else {
-      res.setHeader("X-Database-Offline", "false");
-    }
-    const updated = await saveResource("customPages", payload);
-    res.json(updated);
-  } catch (err) {
-    console.error("[CustomPages Router] POST Error:", err);
-    res.status(500).json({ error: err.message || "Failed to persist custom pages" });
-  }
-});
+var router7 = createCrudRouter("customPages");
 var customPages_default = router7;
 
 // backend/routes/blogs.ts
-import { Router as Router8 } from "express";
-var router8 = Router8();
+import { Router as Router6 } from "express";
+var router8 = Router6();
 router8.get("/", async (req, res) => {
   try {
     const data = await fetchResource("blogs");
@@ -1183,7 +1288,7 @@ router8.post("/", async (req, res) => {
 var blogs_default = router8;
 
 // backend/routes/worldpay.ts
-import { Router as Router9 } from "express";
+import { Router as Router7 } from "express";
 import crypto2 from "crypto";
 
 // backend/email.ts
@@ -1348,7 +1453,7 @@ async function sendOrderConfirmationEmail(order) {
 }
 
 // backend/routes/worldpay.ts
-var router9 = Router9();
+var router9 = Router7();
 var WORLDPAY_CLIENT_ID = process.env.WORLDPAY_CLIENT_ID || "";
 var WORLDPAY_CLIENT_SECRET = process.env.WORLDPAY_CLIENT_SECRET || "";
 var WORLDPAY_API_KEY = process.env.WORLDPAY_API_KEY || "";
@@ -1665,9 +1770,9 @@ router9.post("/webhook", async (req, res) => {
 var worldpay_default = router9;
 
 // backend/routes/agechecked.ts
-import { Router as Router10 } from "express";
+import { Router as Router8 } from "express";
 import crypto3 from "crypto";
-var router10 = Router10();
+var router10 = Router8();
 var DEFAULT_PUBLIC_KEY = "RFGzMiuNjEGeAICshAEISF5aBwvq3FmtWZYxC2E98V5Y8qUR1U9Umy8v87Wwi99o";
 var DEFAULT_SECRET_KEY = "5D0LlfIGUuiDdyLEfoFN6/qj6BYAOw/gtZjDOFcX+dzm9pVAdlp7sFCU8Yf0becdwELX3m/r5\\ncKWeePEzScv2Q==";
 var AGECHECKED_PUBLIC_KEY = process.env.AGECHECKED_PUBLIC_KEY || DEFAULT_PUBLIC_KEY;
@@ -1781,12 +1886,18 @@ async function createExpressApp() {
       }
       const dotIndex = filename.lastIndexOf(".");
       const id = dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
-      console.log(`[Uploads Restore] File ${filename} missing from local disk. Restoring from MongoDB...`);
+      console.log(`[Uploads Restore] File ${filename} missing from local disk. Restoring from MongoDB/memory...`);
       const imgDoc = await getUploadedImage(id);
       if (imgDoc && imgDoc.base64Data) {
-        fs2.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
-        console.log(`[Uploads Restore] Restored successfully: ${filename}`);
-        return res.sendFile(filePath);
+        try {
+          fs2.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
+          console.log(`[Uploads Restore] Restored successfully: ${filename}`);
+        } catch (e) {
+          console.warn(`[Uploads Restore] Could not write to disk, serving directly:`, e);
+        }
+        res.setHeader("Content-Type", imgDoc.mimeType || "image/png");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        return res.send(Buffer.from(imgDoc.base64Data, "base64"));
       }
     } catch (err) {
       console.error("[Uploads Restore] Failed during lazy load restoration:", err);
@@ -1819,7 +1930,7 @@ async function createExpressApp() {
         const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
         const apiKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
         const apiSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
-        if (cloudName && apiKey && apiSecret) {
+        if (cloudName && apiKey && apiSecret && cloudName.toLowerCase() !== "pouch" && cloudName.toLowerCase() !== "pouch supply") {
           console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
           cloudinary.config({
             cloud_name: cloudName,
@@ -1857,7 +1968,7 @@ async function createExpressApp() {
           }
         }
       } catch (err) {
-        console.warn("[Cloudinary Proxy] Exception during Cloudinary upload (falling back to local/MDB):", err);
+        console.log(`[Cloudinary Proxy] Cloudinary upload bypassed (${err?.message || "fallback"}), saving directly to MongoDB Atlas & local media storage.`);
       }
       if (cloudinaryUrl) {
         return res.json({ url: cloudinaryUrl, id: `cloud-${Date.now()}` });
@@ -1888,6 +1999,26 @@ async function createExpressApp() {
         console.error("[API Upload] Failed to write file to local disk:", fsErr);
       }
       await saveUploadedImage(id, base64String, mimeType);
+      try {
+        const currentFiles = await fetchResource("files") || [];
+        const calculatedSize = `${Math.round(base64String.length * 0.75 / 1024)} KB`;
+        const displayName = filename || `${id}.${extension}`;
+        const newFileEntry = {
+          id,
+          fileName: displayName,
+          url: `/uploads/${filenameOnDisk}`,
+          altText: displayName,
+          mimeType,
+          fileSize: calculatedSize,
+          dateAdded: "Today at " + (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        };
+        if (!currentFiles.some((f) => f.id === id)) {
+          currentFiles.unshift(newFileEntry);
+          await saveResource("files", currentFiles);
+        }
+      } catch (fileRegErr) {
+        console.warn("[Upload File Registry] Failed to register uploaded file in 'files' resource:", fileRegErr);
+      }
       const imageUrl = `/uploads/${filenameOnDisk}`;
       console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${imageUrl}`);
       res.json({ url: imageUrl, id });
@@ -1932,7 +2063,7 @@ async function createExpressApp() {
         });
       }
     } catch (err) {
-      console.error("[Test Cloudinary] Error:", err);
+      console.log("[Test Cloudinary] Validation failed:", err?.message || err);
       return res.status(500).json({
         success: false,
         error: err?.message || "Failed to authenticate or upload to Cloudinary."
@@ -2018,9 +2149,6 @@ async function createExpressApp() {
   app.use("/api/blogs", blogs_default);
   app.use("/api/worldpay", worldpay_default);
   app.use("/api/agechecked", agechecked_default);
-  app.get("/placeholder.png", (req, res) => {
-    res.redirect("https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80");
-  });
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({

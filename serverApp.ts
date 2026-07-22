@@ -388,11 +388,6 @@ export async function createExpressApp() {
   app.use("/api/worldpay", worldpayRouter);
   app.use("/api/agechecked", agecheckedRouter);
 
-  // Fallback endpoint for legacy image requests
-  app.get("/placeholder.png", (req, res) => {
-    res.redirect("https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80");
-  });
-
   // Vite middleware for development or static serving for production
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import("vite");

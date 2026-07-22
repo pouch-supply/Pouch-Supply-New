@@ -174,10 +174,6 @@ mongoose.connection.on('error', (err) => {
     error: errorStr,
     isSslAlert: isSsl
   };
-  // Only disconnect pool if not already connected and not a transient background SSL socket recycling event
-  if (!isSsl && mongoose.connection.readyState === 0) {
-    resetConnection();
-  }
 });
 
 export function getMongooseStatus(): DbStatus {
