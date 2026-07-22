@@ -193,6 +193,24 @@ export async function getDb(): Promise<any | null> {
   return null;
 }
 
+function checkAndResetOnNetworkError(error: any) {
+  if (!error) return;
+  const errorStr = String(error?.stack || error?.message || error || "");
+  if (
+    errorStr.includes("MongoNetworkError") ||
+    errorStr.includes("SSL") ||
+    errorStr.includes("ssl") ||
+    errorStr.includes("tls") ||
+    errorStr.includes("alert number 80") ||
+    errorStr.includes("ECONNRESET") ||
+    errorStr.includes("ETIMEDOUT") ||
+    errorStr.includes("Topology")
+  ) {
+    console.warn(`[Mongoose Engine] Network/SSL alert detected (${error?.name || 'Error'}). Resetting connection pool.`);
+    resetConnection();
+  }
+}
+
 // Global resource controllers that fetch from Mongoose DB or fallback to memory
 export async function fetchResource(resource: string): Promise<any[]> {
   const normResource = normalizeResourceName(resource);
@@ -211,7 +229,8 @@ export async function fetchResource(resource: string): Promise<any[]> {
       console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${normResource}".`);
     }
   } catch (error: any) {
-    console.error(`[fetchResource] Error fetching "${normResource}", falling back to memoryCache:`, error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[fetchResource] Database fetch for "${normResource}" unavailable (${error?.message || 'Network/SSL error'}), falling back to memoryCache.`);
   }
   return memoryCache[normResource] || memoryCache[resource] || [];
 }
@@ -251,7 +270,8 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
       console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${normResource}".`);
     }
   } catch (error: any) {
-    console.error(`[saveResource] Error during database synchronization for "${normResource}", saved to memoryCache fallback:`, error);
+    checkAndResetOnNetworkError(error);
+    console.warn(`[saveResource] Error during database synchronization for "${normResource}" (${error?.message || 'Network/SSL error'}), saved to memoryCache fallback.`);
   }
   return memoryCache[normResource];
 }
@@ -270,7 +290,8 @@ export async function fetchSingleItem(resource: string, id: string): Promise<any
       return null;
     }
   } catch (err) {
-    console.error(`[fetchSingleItem] Error fetching "${normResource}" item ${id}:`, err);
+    checkAndResetOnNetworkError(err);
+    console.warn(`[fetchSingleItem] Error fetching "${normResource}" item ${id}:`, err?.message || err);
   }
   const items = memoryCache[normResource] || memoryCache[resource] || [];
   return items.find((i: any) => i.id === id) || null;
@@ -304,7 +325,8 @@ export async function saveSingleItem(resource: string, item: any): Promise<any> 
       console.log(`[saveSingleItem] Upserted item ${item.id} into "${normResource}" collection.`);
     }
   } catch (err) {
-    console.error(`[saveSingleItem] Error saving item ${item.id} to "${normResource}":`, err);
+    checkAndResetOnNetworkError(err);
+    console.warn(`[saveSingleItem] Error saving item ${item.id} to "${normResource}":`, err?.message || err);
   }
   return item;
 }
@@ -330,7 +352,8 @@ export async function deleteSingleItem(resource: string, id: string): Promise<bo
       return res.deletedCount > 0;
     }
   } catch (err) {
-    console.error(`[deleteSingleItem] Error deleting item ${id} from "${normResource}":`, err);
+    checkAndResetOnNetworkError(err);
+    console.warn(`[deleteSingleItem] Error deleting item ${id} from "${normResource}":`, err?.message || err);
   }
   return true;
 }
@@ -376,8 +399,9 @@ export async function saveUploadedImage(id: string, base64Data: string, mimeType
       }
       console.log(`[MongoDB Sync] Successfully saved image to Atlas database for ID: ${id}`);
     }
-  } catch (error) {
-    console.error("[Mongoose Engine] Failed to save uploaded image in DB:", error);
+  } catch (error: any) {
+    checkAndResetOnNetworkError(error);
+    console.warn(`[Mongoose Engine] Failed to save uploaded image in DB (${error?.message || 'Network/SSL error'}), stored in memory fallback.`);
   }
 
   // Return the direct MongoDB streaming API URL
@@ -446,8 +470,9 @@ export async function getUploadedImage(id: string): Promise<{ base64Data: string
         return result;
       }
     }
-  } catch (error) {
-    console.error("[Mongoose Engine] Failed to load image from DB:", error);
+  } catch (error: any) {
+    checkAndResetOnNetworkError(error);
+    console.warn(`[Mongoose Engine] Failed to load image from DB (${error?.message || 'Network/SSL error'}), checking local cache.`);
   }
 
   return null;
@@ -500,8 +525,9 @@ export async function fetchLayoutSettings(): Promise<any> {
       await Model.replaceOne({ id: "layout_settings" }, seedSettings, { upsert: true });
       return seedSettings;
     }
-  } catch (error) {
-    console.error("[serverDb] Failed to fetch layout settings from DB, falling back to local file:", error);
+  } catch (error: any) {
+    checkAndResetOnNetworkError(error);
+    console.warn(`[serverDb] Failed to fetch layout settings from DB (${error?.message || 'Network/SSL error'}), falling back to local file.`);
   }
 
   // Fallback to reading file
@@ -537,8 +563,9 @@ export async function saveLayoutSettings(settings: any): Promise<any> {
       await Model.replaceOne({ id: "layout_settings" }, cleanItem, { upsert: true });
       console.log("[serverDb] Successfully saved layout settings to MongoDB.");
     }
-  } catch (error) {
-    console.error("[serverDb] Failed to save layout settings to DB:", error);
+  } catch (error: any) {
+    checkAndResetOnNetworkError(error);
+    console.warn(`[serverDb] Failed to save layout settings to DB (${error?.message || 'Network/SSL error'}), saved to local file fallback.`);
   }
 
   return payload;

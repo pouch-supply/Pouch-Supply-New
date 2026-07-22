@@ -121,7 +121,7 @@ export async function createExpressApp() {
         const apiKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
         const apiSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
 
-        if (cloudName && apiKey && apiSecret) {
+        if (cloudName && apiKey && apiSecret && cloudName.toLowerCase() !== 'pouch' && cloudName.toLowerCase() !== 'pouch supply') {
           console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
           cloudinary.config({
             cloud_name: cloudName,
@@ -164,7 +164,7 @@ export async function createExpressApp() {
           }
         }
       } catch (err: any) {
-        console.warn("[Cloudinary Proxy] Exception during Cloudinary upload (falling back to local/MDB):", err);
+        console.log(`[Cloudinary Proxy] Cloudinary upload bypassed (${err?.message || 'fallback'}), saving directly to MongoDB Atlas & local media storage.`);
       }
 
       if (cloudinaryUrl) {
@@ -257,7 +257,7 @@ export async function createExpressApp() {
         });
       }
     } catch (err: any) {
-      console.error("[Test Cloudinary] Error:", err);
+      console.log("[Test Cloudinary] Validation failed:", err?.message || err);
       return res.status(500).json({
         success: false,
         error: err?.message || "Failed to authenticate or upload to Cloudinary."

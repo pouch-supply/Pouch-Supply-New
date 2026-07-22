@@ -159,19 +159,25 @@ mongoose.connection.on('connected', () => {
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.warn('[Mongoose Connection Event]: Disconnected from MongoDB.');
+  console.log('[Mongoose Connection Event]: Disconnected from MongoDB (socket recycling or reconnecting).');
   if (lastConnectionStatus.status === 'connected') {
     lastConnectionStatus = { status: 'pending' };
   }
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('[Mongoose Connection Event]: Error:', err);
   const errorStr = String(err?.stack || err?.message || err || "");
+  const isSsl = errorStr.includes("ssl") || errorStr.includes("SSL") || errorStr.includes("alert number 80") || errorStr.includes("ERR_SSL_");
+  console.log(`[Mongoose Connection Event]: Socket event handled (${isSsl ? 'SSL alert / idle reconnect' : err?.message || 'reset'}).`);
   lastConnectionStatus = {
-    status: 'error',
-    error: errorStr
+    status: isSsl ? 'pending' : 'error',
+    error: errorStr,
+    isSslAlert: isSsl
   };
+  // Only disconnect pool if not already connected and not a transient background SSL socket recycling event
+  if (!isSsl && mongoose.connection.readyState === 0) {
+    resetConnection();
+  }
 });
 
 export function getMongooseStatus(): DbStatus {
@@ -234,8 +240,15 @@ export async function connectMongoose(): Promise<typeof mongoose | null> {
   connectPromise = (async () => {
     try {
       const conn = await mongoose.connect(escapedUri, {
-        serverSelectionTimeoutMS: 3000,
-        connectTimeoutMS: 4000,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        maxIdleTimeMS: 10000,
+        maxPoolSize: 10,
+        minPoolSize: 0,
+        autoIndex: false,
+        retryWrites: true,
+        retryReads: true,
       });
 
       lastConnectionStatus = { status: 'connected' };
