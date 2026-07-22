@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Customer } from '../types';
 import { ArrowLeft, ShoppingCart, Heart, Shield, RotateCcw, Truck, Check, Sparkles } from 'lucide-react';
+import { cleanMediaUrl, PLACEHOLDER_IMAGE } from '../utils/mediaUtils';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -260,7 +261,7 @@ export default function ProductDetailView({
           <div className="space-y-4">
             <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden aspect-square flex items-center justify-center p-2 relative group">
               <img
-                src={selectedImage || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=600&q=80'}
+                src={cleanMediaUrl(selectedImage) || PLACEHOLDER_IMAGE}
                 alt={activeVariant ? `${product.title} ${activeVariant.name}` : product.title}
                 className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                 referrerPolicy="no-referrer"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
-import { cleanMediaUrl } from '../utils/mediaUtils';
+import { cleanMediaUrl, PLACEHOLDER_IMAGE } from '../utils/mediaUtils';
 
 interface Slide {
   title: string;
@@ -23,14 +23,14 @@ const DEFAULT_SLIDES: Slide[] = [
   {
     title: 'Precision-Engineered Pouch Purity',
     description: 'Sourced directly from certified laboratories utilizing medical-grade plant fiber and vacuum-fresh locks.',
-    imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80',
+    imageUrl: PLACEHOLDER_IMAGE,
     buttonText: 'View Laboratory Journal',
     buttonLink: 'blogs'
   },
   {
     title: 'Extreme Mint Cryo Freeze',
     description: 'Sub-zero locking technology delivering an immediate, absolute sensory refreshing experience.',
-    imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=1200&q=80',
+    imageUrl: PLACEHOLDER_IMAGE,
     buttonText: 'Explore Sub-Zero Bundles',
     buttonLink: 'frontend-shop'
   }

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Collection, Product, Customer } from '../types';
-import { cleanMediaUrl } from '../utils/mediaUtils';
+import { cleanMediaUrl, PLACEHOLDER_IMAGE } from '../utils/mediaUtils';
 import { 
   ArrowLeft, 
   SlidersHorizontal, 
@@ -709,7 +709,7 @@ export default function CollectionDetailView({
                         }`}
                       >
                         <img
-                          src={cleanMediaUrl(prod.image) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'}
+                          src={cleanMediaUrl(prod.image) || PLACEHOLDER_IMAGE}
                           alt={prod.title}
                           className="w-full h-full object-contain p-1 transition-transform duration-300 group-hover:scale-105 relative z-10"
                           referrerPolicy="no-referrer"

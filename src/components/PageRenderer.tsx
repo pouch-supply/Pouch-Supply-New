@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { CustomPage, PageSection, Product, Collection, Customer, BlogPost } from '../types';
-import { cleanMediaUrl } from '../utils/mediaUtils';
+import { cleanMediaUrl, PLACEHOLDER_IMAGE } from '../utils/mediaUtils';
 import { 
   ArrowRight, ShoppingCart, Star, Heart, FileText, Check, 
   ChevronDown, ChevronUp, Play, Sparkles, TrendingUp, Plus, Minus, ShieldCheck, Award, Eye, Flame, ArrowUpRight, BookOpen, Layers,
@@ -913,7 +913,7 @@ function ClearanceSaleSection({
                   {/* Image */}
                   <div className="w-full h-56 bg-transparent overflow-hidden relative flex items-center justify-center p-1">
                     <img
-                      src={cleanMediaUrl(prod.image) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'}
+                      src={cleanMediaUrl(prod.image) || PLACEHOLDER_IMAGE}
                       className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       alt={prod.title}
                       referrerPolicy="no-referrer"
@@ -1215,7 +1215,7 @@ function FeaturedCollectionSection({
                   {/* Image takes 55%+ of height, dominates card */}
                   <div className="w-full h-56 bg-transparent overflow-hidden relative flex items-center justify-center p-1">
                     <img
-                      src={cleanMediaUrl(prod.image) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'}
+                      src={cleanMediaUrl(prod.image) || PLACEHOLDER_IMAGE}
                       className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       alt={prod.title}
                       referrerPolicy="no-referrer"
@@ -1295,10 +1295,10 @@ function FeaturedCollectionSection({
           {/* Overlapping circular tins for high fidelity design */}
           <div className="relative w-24 h-16 shrink-0 flex items-center justify-center select-none">
             <div className="absolute left-0 w-11 h-11 rounded-full bg-indigo-50 border border-indigo-200 shadow-md flex items-center justify-center overflow-hidden transform rotate-[-12deg]">
-              <img src="https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=80&q=80" className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+              <img src={PLACEHOLDER_IMAGE} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
             </div>
             <div className="absolute left-6 w-11 h-11 rounded-full bg-emerald-50 border border-emerald-200 shadow-md flex items-center justify-center overflow-hidden transform rotate-[8deg] z-10">
-              <img src="https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=80&q=80" className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+              <img src={PLACEHOLDER_IMAGE} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
             </div>
             {/* Save 20% golden badge */}
             <div className="absolute -right-2 -top-1 w-10 h-10 rounded-full bg-amber-400 border border-white text-slate-950 font-black text-[7.5px] leading-tight flex flex-col items-center justify-center shadow-md transform rotate-[15deg] z-20">
@@ -1455,7 +1455,7 @@ export default function PageRenderer({
                       {/* Background Image & Overlay */}
                       <div className="absolute inset-0 z-0">
                         <img
-                          src={cleanMediaUrl(sec.settings.imageUrl) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80'}
+                          src={cleanMediaUrl(sec.settings.imageUrl) || PLACEHOLDER_IMAGE}
                           alt={sec.settings.title || 'Brand Banner'}
                           className="w-full h-full object-cover origin-center scale-100 hover:scale-102 transition-transform duration-10000"
                           referrerPolicy="no-referrer"
@@ -1546,7 +1546,7 @@ export default function PageRenderer({
 
                       <div className="relative group overflow-hidden rounded-2xl border border-slate-200/80 shadow-lg aspect-4/3 md:aspect-square">
                         <img
-                          src={cleanMediaUrl(sec.settings.imageUrl) || 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=800&q=80'}
+                          src={cleanMediaUrl(sec.settings.imageUrl) || PLACEHOLDER_IMAGE}
                           alt={sec.settings.title || 'Banner Media'}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-103"
                           referrerPolicy="no-referrer"
@@ -1786,7 +1786,7 @@ export default function PageRenderer({
                       <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-indigo-500 rounded-3xl blur opacity-15 group-hover:opacity-20 transition duration-500" />
                       <div className="relative h-72 sm:h-96 w-full rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-slate-50">
                         <img
-                          src={cleanMediaUrl(sec.settings.imageUrl) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=800&q=80'}
+                          src={cleanMediaUrl(sec.settings.imageUrl) || PLACEHOLDER_IMAGE}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-102"
                           alt=""
                           referrerPolicy="no-referrer"
@@ -1846,9 +1846,9 @@ export default function PageRenderer({
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                       {[
-                        { title: 'Global Certified Lab Testing', desc: 'Every batch is sourced strictly from laboratory test lines adhering to absolute security and clean protocols.', img: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', badge: 'LAB VERIFIED' },
-                        { title: 'Preservative Free Aroma Boost', desc: 'Crafted using pure food-grade crystalline ingredients, delivering rich natural aromas and smooth fresh locks.', img: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80', badge: '100% TOBACCO-FREE' },
-                        { title: 'Vacuum Sealed Freeze Guard', desc: 'Sealed instantly into high-density polymer canisters ensuring 100% cooling impact remains intact during shipping.', img: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', badge: 'FRESHNESS LOCK' }
+                        { title: 'Global Certified Lab Testing', desc: 'Every batch is sourced strictly from laboratory test lines adhering to absolute security and clean protocols.', img: PLACEHOLDER_IMAGE, badge: 'LAB VERIFIED' },
+                        { title: 'Preservative Free Aroma Boost', desc: 'Crafted using pure food-grade crystalline ingredients, delivering rich natural aromas and smooth fresh locks.', img: PLACEHOLDER_IMAGE, badge: '100% TOBACCO-FREE' },
+                        { title: 'Vacuum Sealed Freeze Guard', desc: 'Sealed instantly into high-density polymer canisters ensuring 100% cooling impact remains intact during shipping.', img: PLACEHOLDER_IMAGE, badge: 'FRESHNESS LOCK' }
                       ].map((col, cIdx) => (
                         <div key={cIdx} className="bg-white border border-slate-100 rounded-2xl overflow-hidden p-4 space-y-4 shadow-sm hover:shadow-xl hover:border-slate-300/60 transition-all group flex flex-col justify-between">
                           <div className="space-y-3">
@@ -1957,7 +1957,7 @@ export default function PageRenderer({
                         <div key={prod.id} className="w-28 shrink-0 bg-white border border-slate-100 p-2 rounded-xl text-center shadow-xs hover:shadow-md transition-shadow group">
                           <div className="h-20 w-20 bg-slate-50 hover:bg-slate-100 rounded-lg overflow-hidden mx-auto flex items-center justify-center transition-all">
                             <img 
-                              src={cleanMediaUrl(prod.image) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'} 
+                              src={cleanMediaUrl(prod.image) || PLACEHOLDER_IMAGE} 
                               className="h-full w-full object-cover group-hover:scale-105 transition-transform" 
                               alt="" 
                               referrerPolicy="no-referrer"
@@ -2233,10 +2233,10 @@ export default function PageRenderer({
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                       {[
-                        'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80',
-                        'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80',
-                        'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80',
-                        'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80'
+                        PLACEHOLDER_IMAGE,
+                        PLACEHOLDER_IMAGE,
+                        PLACEHOLDER_IMAGE,
+                        PLACEHOLDER_IMAGE
                       ].map((imgUrl, galIdx) => (
                         <div key={galIdx} className="h-44 rounded-2xl overflow-hidden border border-slate-150 shadow-sm relative group bg-slate-50">
                           <img 
@@ -2336,9 +2336,9 @@ export default function PageRenderer({
                   const displayBlogs = activeBlogs.length > 0 
                     ? activeBlogs 
                     : [
-                        { id: '1', title: 'Swedish Pouch Manufacturing Regulations', category: 'Standards', date: 'June 19, 2026', image: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', excerpt: 'Behind the clinical clean rooms compounding sterile medical fiber pouches under modern Scandinavian compliance.', author: 'Dr. Anders' },
-                        { id: '2', title: 'Why Sterile Medical Fiber is Better', category: 'Science', date: 'June 18, 2026', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80', excerpt: 'Traditional pouches use coarse paper. Our laboratory leverages vacuum plant cellulose fibers for smooth flavor dispersion.', author: 'Sara Storm' },
-                        { id: '3', title: 'Understanding Nicotine Salt Deliveries', category: 'Formulas', date: 'June 17, 2026', image: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', excerpt: 'An in-depth breakdown of molecular compounding and how sub-zero cooling agents trigger persistent fresh releases.', author: 'Nils Vance' }
+                        { id: '1', title: 'Swedish Pouch Manufacturing Regulations', category: 'Standards', date: 'June 19, 2026', image: PLACEHOLDER_IMAGE, excerpt: 'Behind the clinical clean rooms compounding sterile medical fiber pouches under modern Scandinavian compliance.', author: 'Dr. Anders' },
+                        { id: '2', title: 'Why Sterile Medical Fiber is Better', category: 'Science', date: 'June 18, 2026', image: PLACEHOLDER_IMAGE, excerpt: 'Traditional pouches use coarse paper. Our laboratory leverages vacuum plant cellulose fibers for smooth flavor dispersion.', author: 'Sara Storm' },
+                        { id: '3', title: 'Understanding Nicotine Salt Deliveries', category: 'Formulas', date: 'June 17, 2026', image: PLACEHOLDER_IMAGE, excerpt: 'An in-depth breakdown of molecular compounding and how sub-zero cooling agents trigger persistent fresh releases.', author: 'Nils Vance' }
                       ];
 
                   return (
@@ -2365,7 +2365,7 @@ export default function PageRenderer({
                           >
                             <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-50 relative">
                               <img 
-                                src={cleanMediaUrl(b.image) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'} 
+                                src={cleanMediaUrl(b.image) || PLACEHOLDER_IMAGE} 
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                                 alt=""
                                 referrerPolicy="no-referrer"

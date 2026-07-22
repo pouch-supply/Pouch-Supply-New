@@ -10,7 +10,7 @@ import {
   Pencil, Copy, Bold, Italic, Underline, AlignLeft, Link, Calendar, ArrowLeft, MoreHorizontal, Code, FileEdit, LogOut, Download, Upload
 } from 'lucide-react';
 import ImageUploadInput from './ImageUploadInput';
-import { cleanMediaUrl } from '../utils/mediaUtils';
+import { cleanMediaUrl, PLACEHOLDER_IMAGE } from '../utils/mediaUtils';
 import CollectionEditor from './CollectionEditor';
 import ProductEditor from './ProductEditor';
 import BlogContentEditor from './BlogContentEditor';
@@ -2149,19 +2149,19 @@ export default function AdminDashboard({
         columnsDesktop: sectionType === 'Blog post' ? 3 : undefined,
         columnsMobile: sectionType === 'Blog post' ? 1 : undefined,
         brandItems: (sectionType === 'Brand list' || sectionType === 'Brands we offer') ? [
-          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: '77 Nicotine' },
-          { imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Clew Pouches' },
-          { imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Cuba Black' },
-          { imageUrl: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Maggie Original' },
-          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Nordic Spirit' },
-          { imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'XQS Sweden' },
-          { imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'ZYN Mint' },
-          { imageUrl: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Pablo Strong' },
-          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Killa Double' },
-          { imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Fumi Fresh' },
-          { imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Velo Active' },
-          { imageUrl: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'White Fox' },
-          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Snü Fruity' }
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: '77 Nicotine' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Clew Pouches' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Cuba Black' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Maggie Original' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Nordic Spirit' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'XQS Sweden' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'ZYN Mint' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Pablo Strong' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Killa Double' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Fumi Fresh' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Velo Active' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'White Fox' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Snü Fruity' }
         ] : undefined,
         buttonText: (sectionType === 'Image banner' || sectionType === 'Image with text' || sectionType === 'Rich text' || sectionType === 'Video banner') ? 'Purchase Packs' : undefined,
         buttonLink: (sectionType === 'Image banner' || sectionType === 'Image with text' || sectionType === 'Rich text' || sectionType === 'Video banner') ? 'frontend-shop' : undefined,
@@ -2170,19 +2170,19 @@ export default function AdminDashboard({
         selectedProductIds: sectionType === 'Clearance Sale' ? localProducts.filter(p => p.status === 'Active').slice(0, 4).map(p => p.id) : undefined,
         videoUrl: sectionType === 'Video banner' ? '' : undefined,
         videoMp4Url: sectionType === 'Video banner' ? 'https://assets.mixkit.co/videos/preview/mixkit-laboratory-test-tubes-40436-large.mp4' : undefined,
-        imageUrl: (sectionType === 'Image banner' || sectionType === 'Image with text') ? 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80' : undefined,
+        imageUrl: (sectionType === 'Image banner' || sectionType === 'Image with text') ? PLACEHOLDER_IMAGE : undefined,
         slides: sectionType === 'Slideshow' ? [
           {
             title: 'Precision-Engineered Pouch Purity',
             description: 'Sourced directly from certified laboratories utilizing medical-grade plant fiber and vacuum-fresh locks.',
-            imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80',
+            imageUrl: PLACEHOLDER_IMAGE,
             buttonText: 'View Laboratory Journal',
             buttonLink: 'blogs'
           },
           {
             title: 'Extreme Mint Cryo Freeze',
             description: 'Sub-zero locking technology delivering an immediate, absolute sensory refreshing experience.',
-            imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=1200&q=80',
+            imageUrl: PLACEHOLDER_IMAGE,
             buttonText: 'Explore Sub-Zero Bundles',
             buttonLink: 'frontend-shop'
           }
@@ -2197,9 +2197,9 @@ export default function AdminDashboard({
           { iconName: 'Package', title: 'Never run out', description: 'Auto-refill and easy reordering.', linkUrl: 'frontend-shop' }
         ] : undefined,
         stepItems: sectionType === 'How it works' ? [
-          { number: '1', title: 'Choose your plan', description: 'Select one of our flexible subscription plans', imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80' },
-          { number: '2', title: 'Choose your pouches', description: 'Mix and match your favourite brands, flavours and strengths. (these can be changed at anytime)', imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80' },
-          { number: '3', title: 'We handle the rest', description: 'Delivered automatically to your door hassle free weekly, Bi-weekly or monthly', imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80' }
+          { number: '1', title: 'Choose your plan', description: 'Select one of our flexible subscription plans', imageUrl: PLACEHOLDER_IMAGE },
+          { number: '2', title: 'Choose your pouches', description: 'Mix and match your favourite brands, flavours and strengths. (these can be changed at anytime)', imageUrl: PLACEHOLDER_IMAGE },
+          { number: '3', title: 'We handle the rest', description: 'Delivered automatically to your door hassle free weekly, Bi-weekly or monthly', imageUrl: PLACEHOLDER_IMAGE }
         ] : undefined,
         trustBadges: sectionType === 'Trust badges' ? [
           { iconType: 'badge', title: '100% AUTHENTIC', description: 'Direct from official suppliers.' },
@@ -2517,7 +2517,7 @@ export default function AdminDashboard({
       slug: slug,
       excerpt: newBlogForm.excerpt || '',
       content: newBlogForm.content || '',
-      image: newBlogForm.image || 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=800&q=80',
+      image: newBlogForm.image || '',
       author: newBlogForm.author || 'Store Owner',
       category: newBlogForm.category || 'General',
       status: (newBlogForm.status as 'Active' | 'Draft' | 'Archived') || 'Active',
@@ -3579,7 +3579,7 @@ export default function AdminDashboard({
                                 <div className="flex items-center gap-3">
                                   <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center p-1 relative shrink-0">
                                     <img
-                                      src={item.image || 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=80&q=80'}
+                                      src={item.image || PLACEHOLDER_IMAGE}
                                       alt={item.productTitle}
                                       className="h-full object-contain filter drop-shadow-sm"
                                       referrerPolicy="no-referrer"
@@ -5122,7 +5122,7 @@ export default function AdminDashboard({
                                   <div className="text-center space-y-3 py-4">
                                     <div className="relative h-28 w-full rounded-xl bg-slate-100 overflow-hidden border">
                                       <img 
-                                        src={sec.settings.imageUrl || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'} 
+                                        src={sec.settings.imageUrl || PLACEHOLDER_IMAGE} 
                                         className="h-full w-full object-cover" 
                                         alt="" 
                                         referrerPolicy="no-referrer"
@@ -5146,7 +5146,7 @@ export default function AdminDashboard({
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center py-4 text-left">
                                     <div className="h-28 w-full rounded-xl bg-slate-50 border overflow-hidden relative shadow-inner">
                                       <img 
-                                        src={sec.settings.imageUrl || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'} 
+                                        src={sec.settings.imageUrl || PLACEHOLDER_IMAGE} 
                                         className="h-full w-full object-cover" 
                                         alt="" 
                                         referrerPolicy="no-referrer"
@@ -5495,7 +5495,7 @@ export default function AdminDashboard({
                                     {/* background cover Image */}
                                     <div className="absolute inset-0 z-0">
                                       <img 
-                                        src={sec.settings.slides?.[activeSlideEditIndex]?.imageUrl || sec.settings.imageUrl || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80'} 
+                                        src={sec.settings.slides?.[activeSlideEditIndex]?.imageUrl || sec.settings.imageUrl || PLACEHOLDER_IMAGE} 
                                         className="w-full h-full object-cover opacity-50" 
                                         alt="" 
                                         referrerPolicy="no-referrer"

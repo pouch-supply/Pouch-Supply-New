@@ -281,7 +281,7 @@ export default function ProductEditor({
         break;
       }
       case 'image': {
-        const url = prompt('Enter the Image URL:', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500');
+        const url = prompt('Enter the Image URL:', '');
         if (!url) return;
         const alt = prompt('Enter alt text for image:', 'Merchandise detail') || 'Product image';
         replacement = `<div class="my-4 flex justify-center"><img src="${url}" alt="${alt}" class="rounded-xl border border-slate-150 max-h-72 object-contain" style="max-height: 288px;" /></div>`;
@@ -469,7 +469,7 @@ export default function ProductEditor({
     }
 
     const finalSlug = customSlug.trim() ? slugify(customSlug) : slugify(title);
-    const finalParentImage = mediaList[0] || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80';
+    const finalParentImage = mediaList[0] || '';
 
     const calculatedInventory = concreteVariantsList.length > 0
       ? concreteVariantsList.reduce((sum, v) => sum + (v.inventory || 0), 0)
