@@ -764,7 +764,14 @@ async function getUploadedImage(id) {
     const conn = await connectMongoose();
     if (conn) {
       const UploadedModel = UploadedImageModel;
-      const doc = await UploadedModel.findOne({ $or: [{ id }, { id: bareId }] }).lean().exec();
+      const escapedBare = bareId.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      const doc = await UploadedModel.findOne({
+        $or: [
+          { id },
+          { id: bareId },
+          { id: { $regex: new RegExp(`^${escapedBare}`, 'i') } }
+        ]
+      }).lean().exec();
       if (doc) {
         const cleanData = sanitizeBase64(doc.base64Data);
         const result = {
@@ -1877,7 +1884,7 @@ async function createExpressApp() {
       console.error("[Uploads Setup] Fatal: failed to create /tmp/uploads:", tmpErr);
     }
   }
-  app.get("/uploads/:filename", async (req, res, next) => {
+  app.get("/uploads/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
       const filePath = path2.join(uploadsPath, filename);
@@ -1887,7 +1894,7 @@ async function createExpressApp() {
       const dotIndex = filename.lastIndexOf(".");
       const id = dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
       console.log(`[Uploads Restore] File ${filename} missing from local disk. Restoring from MongoDB/memory...`);
-      const imgDoc = await getUploadedImage(id);
+      const imgDoc = await getUploadedImage(filename) || await getUploadedImage(id);
       if (imgDoc && imgDoc.base64Data) {
         try {
           fs2.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
@@ -1902,7 +1909,7 @@ async function createExpressApp() {
     } catch (err) {
       console.error("[Uploads Restore] Failed during lazy load restoration:", err);
     }
-    next();
+    return res.status(404).send("File not found");
   });
   app.use("/uploads", express.static(uploadsPath));
   app.post("/api/upload", async (req, res) => {
@@ -2019,7 +2026,7 @@ async function createExpressApp() {
       } catch (fileRegErr) {
         console.warn("[Upload File Registry] Failed to register uploaded file in 'files' resource:", fileRegErr);
       }
-      const imageUrl = `/uploads/${filenameOnDisk}`;
+      const imageUrl = mimeType.startsWith("video/") ? `/uploads/${filenameOnDisk}` : `/api/images/${id}`;
       console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${imageUrl}`);
       res.json({ url: imageUrl, id });
     } catch (err) {

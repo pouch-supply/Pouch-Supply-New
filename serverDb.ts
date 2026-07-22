@@ -456,7 +456,14 @@ export async function getUploadedImage(id: string): Promise<{ base64Data: string
     const conn = await connectMongoose();
     if (conn) {
       const UploadedModel = UploadedImageModel as any;
-      const doc = await UploadedModel.findOne({ $or: [{ id }, { id: bareId }] }).lean().exec();
+      const escapedBare = bareId.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      const doc = await UploadedModel.findOne({
+        $or: [
+          { id },
+          { id: bareId },
+          { id: { $regex: new RegExp(`^${escapedBare}`, 'i') } }
+        ]
+      }).lean().exec();
       if (doc) {
         const cleanData = sanitizeBase64(doc.base64Data);
         const result = {

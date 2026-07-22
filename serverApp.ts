@@ -59,7 +59,7 @@ export async function createExpressApp() {
     }
   }
 
-  app.get("/uploads/:filename", async (req, res, next) => {
+  app.get("/uploads/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
       const filePath = path.join(uploadsPath, filename);
@@ -73,7 +73,7 @@ export async function createExpressApp() {
       const id = dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
       
       console.log(`[Uploads Restore] File ${filename} missing from local disk. Restoring from MongoDB/memory...`);
-      const imgDoc = await getUploadedImage(id);
+      const imgDoc = await getUploadedImage(filename) || await getUploadedImage(id);
       if (imgDoc && imgDoc.base64Data) {
         try {
           fs.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
@@ -88,7 +88,7 @@ export async function createExpressApp() {
     } catch (err) {
       console.error("[Uploads Restore] Failed during lazy load restoration:", err);
     }
-    next();
+    return res.status(404).send("File not found");
   });
 
   // Serve static uploaded files locally from disk as a fallback for standard directory requests
@@ -232,8 +232,8 @@ export async function createExpressApp() {
         console.warn("[Upload File Registry] Failed to register uploaded file in 'files' resource:", fileRegErr);
       }
 
-      // Return the static uploads url which supports byte ranges for videos
-      const imageUrl = `/uploads/${filenameOnDisk}`;
+      // Return direct MongoDB stream URL for durable persistence
+      const imageUrl = mimeType.startsWith("video/") ? `/uploads/${filenameOnDisk}` : `/api/images/${id}`;
       
       // Always return relative URL so the browser loads directly from current origin without domain mismatch
       console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${imageUrl}`);
