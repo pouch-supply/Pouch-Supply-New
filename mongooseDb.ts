@@ -129,7 +129,9 @@ const LayoutSettingsSchema = new Schema({
   footerLogoDescription: { type: String },
   footerLogoImage: { type: String },
   klaviyoPublicKey: { type: String },
-  imgbbApiKey: { type: String },
+  cloudinaryCloudName: { type: String },
+  cloudinaryApiKey: { type: String },
+  cloudinaryApiSecret: { type: String },
   menuItems: { type: Array }
 }, { strict: false, timestamps: true });
 

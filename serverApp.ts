@@ -202,16 +202,16 @@ export async function createExpressApp() {
       // Return the static uploads url which supports byte ranges for videos
       const imageUrl = `/uploads/${filenameOnDisk}`;
       
-      // Convert to absolute URL
-      let absoluteUrl = imageUrl;
-      if (imageUrl.startsWith("/")) {
-        const host = req.get("host") || "pouch-supply.com";
-        const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-        absoluteUrl = `${protocol}://${host}${imageUrl}`;
+      // Use relative URL by default so the browser loads directly without localhost:3000 domain mismatch
+      let returnUrl = imageUrl;
+      const xHost = req.headers["x-forwarded-host"] as string;
+      if (xHost && !xHost.includes("localhost") && !xHost.includes("127.0.0.1")) {
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        returnUrl = `${protocol}://${xHost}${imageUrl}`;
       }
 
-      console.log(`[API Upload] Successfully persisted ${mimeType} media. Absolute URL: ${absoluteUrl}`);
-      res.json({ url: absoluteUrl, id });
+      console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${returnUrl}`);
+      res.json({ url: returnUrl, id });
     } catch (err: any) {
       console.error("[API Upload] Fail:", err);
       res.status(500).json({ error: err.message || "Failed to process image upload database insertion" });
