@@ -24,8 +24,9 @@ export default function ImageUploadInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Only image files are permitted (png, jpg, jpeg, webp, svg)!');
+    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp|svg|gif|avif|ico|heic|bmp)$/i.test(file.name);
+    if (!isImage) {
+      alert('Only image files are permitted (png, jpg, jpeg, webp, svg, avif)!');
       return;
     }
     setIsUploading(true);
@@ -36,7 +37,7 @@ export default function ImageUploadInput({
           const res = await fetch('/api/upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: reader.result })
+            body: JSON.stringify({ data: reader.result, filename: file.name })
           });
           if (!res.ok) {
             throw new Error(`Server returned ${res.status}`);
@@ -54,7 +55,7 @@ export default function ImageUploadInput({
             }));
           }
         } catch (err) {
-          console.warn('[ImageUpload] API upload failed, falling back to local base64:', err);
+          console.warn('[ImageUpload] API upload failed, falling back to local base64 DataURL:', err);
           onChange(reader.result);
           window.dispatchEvent(new CustomEvent('app-image-uploaded', {
             detail: { url: reader.result, fileName: file.name }
@@ -144,8 +145,13 @@ export default function ImageUploadInput({
                   target.onerror = null;
                   if (typeof value === 'string' && value.startsWith('data:')) {
                     target.src = value;
-                  } else {
-                    target.src = 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=150&q=80';
+                  } else if (value && value.includes('/uploads/')) {
+                    // Try direct stream endpoint if static asset loading had timing mismatch
+                    const filename = value.split('/uploads/').pop();
+                    if (filename) {
+                      const id = filename.split('.')[0];
+                      target.src = `/api/images/${id}`;
+                    }
                   }
                 }}
               />

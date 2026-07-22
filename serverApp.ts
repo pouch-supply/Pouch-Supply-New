@@ -72,12 +72,18 @@ export async function createExpressApp() {
       const dotIndex = filename.lastIndexOf(".");
       const id = dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
       
-      console.log(`[Uploads Restore] File ${filename} missing from local disk. Restoring from MongoDB...`);
+      console.log(`[Uploads Restore] File ${filename} missing from local disk. Restoring from MongoDB/memory...`);
       const imgDoc = await getUploadedImage(id);
       if (imgDoc && imgDoc.base64Data) {
-        fs.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
-        console.log(`[Uploads Restore] Restored successfully: ${filename}`);
-        return res.sendFile(filePath);
+        try {
+          fs.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
+          console.log(`[Uploads Restore] Restored successfully: ${filename}`);
+        } catch (e) {
+          console.warn(`[Uploads Restore] Could not write to disk, serving directly:`, e);
+        }
+        res.setHeader("Content-Type", imgDoc.mimeType || "image/png");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        return res.send(Buffer.from(imgDoc.base64Data, "base64"));
       }
     } catch (err) {
       console.error("[Uploads Restore] Failed during lazy load restoration:", err);
@@ -204,6 +210,28 @@ export async function createExpressApp() {
       // Sync to MongoDB Atlas for persistence
       await saveUploadedImage(id, base64String, mimeType);
       
+      // Register file entry in 'files' collection for File Manager
+      try {
+        const currentFiles = await fetchResource("files") || [];
+        const calculatedSize = `${Math.round((base64String.length * 0.75) / 1024)} KB`;
+        const displayName = filename || `${id}.${extension}`;
+        const newFileEntry = {
+          id,
+          fileName: displayName,
+          url: `/uploads/${filenameOnDisk}`,
+          altText: displayName,
+          mimeType: mimeType,
+          fileSize: calculatedSize,
+          dateAdded: 'Today at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        if (!currentFiles.some((f: any) => f.id === id)) {
+          currentFiles.unshift(newFileEntry);
+          await saveResource("files", currentFiles);
+        }
+      } catch (fileRegErr) {
+        console.warn("[Upload File Registry] Failed to register uploaded file in 'files' resource:", fileRegErr);
+      }
+
       // Return the static uploads url which supports byte ranges for videos
       const imageUrl = `/uploads/${filenameOnDisk}`;
       
