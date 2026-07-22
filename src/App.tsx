@@ -918,7 +918,7 @@ export default function App() {
         productId: `sub-pack-${Date.now()}`,
         productTitle: desc,
         price: flatPrice,
-        image: '/placeholder.png',
+        image: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80',
         quantity: 1,
         vendor: 'Subscription Pack'
       }
@@ -1646,10 +1646,14 @@ export default function App() {
                   {/* Welcome Highlights */}
                   <section className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <img
-                      src="/placeholder.png"
+                      src="https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=800&q=80"
                       alt="Canisters"
                       className="rounded-2xl shadow-md border object-cover h-80 w-full"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                     <div className="space-y-4">
                       <span className="text-xs text-indigo-650 font-bold uppercase tracking-wider">High performance Can packaging</span>

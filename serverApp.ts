@@ -362,7 +362,7 @@ export async function createExpressApp() {
 
   // Serve placeholder.png directly from root workspace to handle all environments smoothly
   app.get("/placeholder.png", (req, res) => {
-    res.sendFile(path.resolve(process.cwd(), "placeholder.png"));
+    res.redirect("https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80");
   });
 
   // Vite middleware for development or static serving for production

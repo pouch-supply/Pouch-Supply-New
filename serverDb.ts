@@ -244,6 +244,76 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
   return memoryCache[resource];
 }
 
+export async function fetchSingleItem(resource: string, id: string): Promise<any | null> {
+  try {
+    const conn = await connectMongoose();
+    const Model = getModelForResource(resource) as any;
+    if (conn && Model) {
+      const doc = await Model.findOne({ id }).lean().exec();
+      if (doc) {
+        const { _id, __v, ...cleanDoc } = doc;
+        return cleanDoc;
+      }
+      return null;
+    }
+  } catch (err) {
+    console.error(`[fetchSingleItem] Error fetching "${resource}" item ${id}:`, err);
+  }
+  const items = memoryCache[resource] || [];
+  return items.find((i: any) => i.id === id) || null;
+}
+
+export async function saveSingleItem(resource: string, item: any): Promise<any> {
+  if (!item || !item.id) {
+    throw new Error("Item must have a valid 'id' field");
+  }
+  
+  // Update memory cache
+  const items = memoryCache[resource] || [];
+  const existingIdx = items.findIndex((i: any) => i.id === item.id);
+  if (existingIdx !== -1) {
+    items[existingIdx] = { ...item };
+  } else {
+    items.push({ ...item });
+  }
+  memoryCache[resource] = items;
+
+  try {
+    const conn = await connectMongoose();
+    const Model = getModelForResource(resource) as any;
+    if (conn && Model) {
+      const { _id, __v, ...cleanItem } = item;
+      await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
+      console.log(`[saveSingleItem] Upserted item ${item.id} into "${resource}" collection.`);
+    }
+  } catch (err) {
+    console.error(`[saveSingleItem] Error saving item ${item.id} to "${resource}":`, err);
+  }
+  return item;
+}
+
+export async function deleteSingleItem(resource: string, id: string): Promise<boolean> {
+  if (!id) return false;
+
+  // Update memory cache
+  if (memoryCache[resource]) {
+    memoryCache[resource] = memoryCache[resource].filter((i: any) => i.id !== id);
+  }
+
+  try {
+    const conn = await connectMongoose();
+    const Model = getModelForResource(resource) as any;
+    if (conn && Model) {
+      const res = await Model.deleteOne({ id });
+      console.log(`[deleteSingleItem] Deleted item ${id} from "${resource}" collection. Deleted count: ${res.deletedCount}`);
+      return res.deletedCount > 0;
+    }
+  } catch (err) {
+    console.error(`[deleteSingleItem] Error deleting item ${id} from "${resource}":`, err);
+  }
+  return true;
+}
+
 // Memory cache buffer for uploaded files when MongoDB is offline
 const memoryImages: Record<string, { base64Data: string; mimeType: string }> = {};
 

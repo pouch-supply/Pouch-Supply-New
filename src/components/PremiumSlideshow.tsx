@@ -23,14 +23,14 @@ const DEFAULT_SLIDES: Slide[] = [
   {
     title: 'Precision-Engineered Pouch Purity',
     description: 'Sourced directly from certified laboratories utilizing medical-grade plant fiber and vacuum-fresh locks.',
-    imageUrl: '/placeholder.png',
+    imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80',
     buttonText: 'View Laboratory Journal',
     buttonLink: 'blogs'
   },
   {
     title: 'Extreme Mint Cryo Freeze',
     description: 'Sub-zero locking technology delivering an immediate, absolute sensory refreshing experience.',
-    imageUrl: '/placeholder.png',
+    imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=1200&q=80',
     buttonText: 'Explore Sub-Zero Bundles',
     buttonLink: 'frontend-shop'
   }
@@ -98,13 +98,13 @@ export default function PremiumSlideshow({
               {/* Background cover image with sleek gradient overlay */}
               <div className="absolute inset-0">
                 <img
-                  src={cleanMediaUrl(slide.imageUrl) || '/placeholder.png'}
+                  src={cleanMediaUrl(slide.imageUrl)}
                   alt={slide.title}
                   className="w-full h-full object-cover transition-transform duration-10000 ease-linear scale-100 group-hover:scale-102"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/placeholder.png';
+                    e.currentTarget.style.display = 'none';
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/60 to-transparent sm:block hidden" />

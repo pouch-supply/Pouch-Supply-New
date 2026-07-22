@@ -708,10 +708,14 @@ export default function CollectionDetailView({
                         }`}
                       >
                         <img
-                          src={prod.image || '/placeholder.png'}
+                          src={cleanMediaUrl(prod.image) || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'}
                           alt={prod.title}
                           className="w-full h-full object-contain p-1 transition-transform duration-300 group-hover:scale-105 relative z-10"
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                       </div>
 

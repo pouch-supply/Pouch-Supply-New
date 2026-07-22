@@ -2,6 +2,7 @@
 import express from "express";
 import path2 from "path";
 import fs2 from "fs";
+import { v2 as cloudinary } from "cloudinary";
 
 // serverDb.ts
 import fs from "fs";
@@ -38,7 +39,7 @@ var DEFAULT_PAGES = [
           description: "Start managing your products, collections, and page sections inside the Admin Dashboard.",
           buttonText: "View Store Catalog",
           buttonLink: "frontend-shop",
-          imageUrl: "/placeholder.png"
+          imageUrl: "https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80"
         }
       }
     ]
@@ -260,7 +261,9 @@ var LayoutSettingsSchema = new Schema({
   footerLogoDescription: { type: String },
   footerLogoImage: { type: String },
   klaviyoPublicKey: { type: String },
-  imgbbApiKey: { type: String },
+  cloudinaryCloudName: { type: String },
+  cloudinaryApiKey: { type: String },
+  cloudinaryApiSecret: { type: String },
   menuItems: { type: Array }
 }, { strict: false, timestamps: true });
 var ProductModel = mongoose.models.Product || mongoose.model("Product", ProductSchema, "products");
@@ -579,17 +582,37 @@ async function saveResource(resource, list) {
   return memoryCache[resource];
 }
 var memoryImages = {};
+function sanitizeBase64(raw) {
+  if (!raw) return "";
+  if (raw.includes(";base64,")) {
+    return raw.split(";base64,").pop() || raw;
+  }
+  return raw.replace(/^data:[^;]+;base64,/, "").trim();
+}
 async function saveUploadedImage(id, base64Data, mimeType) {
-  memoryImages[id] = { base64Data, mimeType };
+  const cleanData = sanitizeBase64(base64Data);
+  memoryImages[id] = { base64Data: cleanData, mimeType };
+  const dotIdx = id.lastIndexOf(".");
+  const bareId = dotIdx !== -1 ? id.substring(0, dotIdx) : id;
+  if (bareId !== id) {
+    memoryImages[bareId] = { base64Data: cleanData, mimeType };
+  }
   try {
     const conn = await connectMongoose();
     if (conn) {
       const UploadedModel = UploadedImageModel;
       await UploadedModel.replaceOne(
         { id },
-        { id, base64Data, mimeType },
+        { id, base64Data: cleanData, mimeType },
         { upsert: true }
       );
+      if (bareId !== id) {
+        await UploadedModel.replaceOne(
+          { id: bareId },
+          { id: bareId, base64Data: cleanData, mimeType },
+          { upsert: true }
+        );
+      }
       console.log(`[MongoDB Sync] Successfully saved image to Atlas database for ID: ${id}`);
     }
   } catch (error) {
@@ -598,17 +621,22 @@ async function saveUploadedImage(id, base64Data, mimeType) {
   return `/api/images/${id}`;
 }
 async function getUploadedImage(id) {
+  const dotIdx = id.lastIndexOf(".");
+  const bareId = dotIdx !== -1 ? id.substring(0, dotIdx) : id;
   if (memoryImages[id]) {
     return memoryImages[id];
   }
+  if (memoryImages[bareId]) {
+    return memoryImages[bareId];
+  }
   try {
     let uploadsDir = path.join(process.cwd(), "uploads");
-    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    if (process.env.VERCEL || process.env.NODE_ENV === "production") {
       uploadsDir = "/tmp/uploads";
     }
     if (fs.existsSync(uploadsDir)) {
       const files = fs.readdirSync(uploadsDir);
-      const matchedFile = files.find((f) => f.startsWith(id + "."));
+      const matchedFile = files.find((f) => f.startsWith(id + ".") || f.startsWith(bareId + "."));
       if (matchedFile) {
         const filePath = path.join(uploadsDir, matchedFile);
         const buffer = fs.readFileSync(filePath);
@@ -620,7 +648,10 @@ async function getUploadedImage(id) {
         else if (matchedFile.endsWith(".gif")) mimeType = "image/gif";
         else if (matchedFile.endsWith(".mp4")) mimeType = "video/mp4";
         else if (matchedFile.endsWith(".webm")) mimeType = "video/webm";
-        return { base64Data, mimeType };
+        const result = { base64Data, mimeType };
+        memoryImages[id] = result;
+        memoryImages[bareId] = result;
+        return result;
       }
     }
   } catch (err) {
@@ -630,13 +661,16 @@ async function getUploadedImage(id) {
     const conn = await connectMongoose();
     if (conn) {
       const UploadedModel = UploadedImageModel;
-      const doc = await UploadedModel.findOne({ id }).lean().exec();
+      const doc = await UploadedModel.findOne({ $or: [{ id }, { id: bareId }] }).lean().exec();
       if (doc) {
-        memoryImages[id] = { base64Data: doc.base64Data, mimeType: doc.mimeType };
-        return {
-          base64Data: doc.base64Data,
-          mimeType: doc.mimeType
+        const cleanData = sanitizeBase64(doc.base64Data);
+        const result = {
+          base64Data: cleanData,
+          mimeType: doc.mimeType || "image/png"
         };
+        memoryImages[id] = result;
+        memoryImages[bareId] = result;
+        return result;
       }
     }
   } catch (error) {
@@ -654,7 +688,9 @@ async function fetchLayoutSettings() {
     footerLogoDescription: "Leading premium directory for tobacco-free nicotine slim white canisters. Sourced directly from partners across Sweden, Poland, and Germany.",
     footerLogoImage: "",
     klaviyoPublicKey: "",
-    imgbbApiKey: "",
+    cloudinaryCloudName: "",
+    cloudinaryApiKey: "",
+    cloudinaryApiSecret: "",
     menuItems: [
       { id: "1", label: "Home", tab: "frontend-home", type: "tab" },
       { id: "2", label: "Subscribe", tab: "frontend-subscribe", type: "tab" },
@@ -1717,10 +1753,9 @@ async function createExpressApp() {
     }
     express.urlencoded({ limit: "50mb", extended: true })(req, res, next);
   });
-  // Serves /uploads with lazy loading fallback from MongoDB Atlas!
   let uploadsPath = path2.join(process.cwd(), "uploads");
   try {
-    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    if (process.env.VERCEL || process.env.NODE_ENV === "production") {
       uploadsPath = "/tmp/uploads";
     }
     if (!fs2.existsSync(uploadsPath)) {
@@ -1737,7 +1772,6 @@ async function createExpressApp() {
       console.error("[Uploads Setup] Fatal: failed to create /tmp/uploads:", tmpErr);
     }
   }
-
   app.get("/uploads/:filename", async (req, res, next) => {
     try {
       const filename = req.params.filename;
@@ -1768,26 +1802,141 @@ async function createExpressApp() {
       }
       let base64String = data;
       let mimeType = "image/png";
-      if (data.startsWith("data:")) {
+      if (typeof data === "string" && data.startsWith("data:")) {
         const matches = data.match(/^data:([^;]+);base64,(.+)$/);
         if (matches && matches.length === 3) {
           mimeType = matches[1];
           base64String = matches[2];
         }
       }
-      const id = `img-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
-      const imageUrl = await saveUploadedImage(id, base64String, mimeType);
-      let absoluteUrl = imageUrl;
-      if (imageUrl.startsWith("/")) {
-        const host = req.get("host") || "pouch-supply.com";
-        const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-        absoluteUrl = `${protocol}://${host}${imageUrl}`;
+      if (typeof base64String === "string" && base64String.includes(";base64,")) {
+        base64String = base64String.split(";base64,").pop() || base64String;
       }
-      console.log(`[API Upload] Successfully persisted ${mimeType} image. Absolute URL: ${absoluteUrl}`);
-      res.json({ url: absoluteUrl, id });
+      base64String = (base64String || "").trim();
+      let cloudinaryUrl = null;
+      try {
+        const layoutSettings = await fetchLayoutSettings();
+        const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+        const apiKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+        const apiSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+        if (cloudName && apiKey && apiSecret) {
+          console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
+          cloudinary.config({
+            cloud_name: cloudName,
+            api_key: apiKey,
+            api_secret: apiSecret,
+            secure: true
+          });
+          const uploadStr = data.startsWith("data:") ? data : `data:${mimeType};base64,${base64String}`;
+          console.log(`[Cloudinary Proxy] Uploading ${mimeType} asset directly to Cloudinary edge servers...`);
+          const cloudinaryResponse = await cloudinary.uploader.upload(uploadStr, {
+            resource_type: "auto",
+            folder: "pouch_supply"
+          });
+          if (cloudinaryResponse && cloudinaryResponse.secure_url) {
+            cloudinaryUrl = cloudinaryResponse.secure_url;
+            console.log("[Cloudinary Proxy] Success! Uploaded to Cloudinary CDN URL:", cloudinaryUrl);
+            try {
+              const currentFiles = await fetchResource("files") || [];
+              const calculatedSize = `${Math.round(base64String.length * 0.75 / 1024)} KB`;
+              const filenameFromMime = `cloudinary_${Date.now()}.${mimeType.split("/")[1] || "png"}`;
+              const newFileEntry = {
+                id: `cloud-${Date.now()}`,
+                fileName: filenameFromMime,
+                url: cloudinaryUrl,
+                altText: "Cloudinary CDN hosted media asset",
+                mimeType,
+                fileSize: calculatedSize
+              };
+              currentFiles.push(newFileEntry);
+              await saveResource("files", currentFiles);
+              console.log("[Cloudinary DB Sync] Saved new Cloudinary media record to MongoDB 'files' collection.");
+            } catch (dbErr) {
+              console.error("[Cloudinary DB Sync] Failed to register file record in 'files' collection:", dbErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[Cloudinary Proxy] Exception during Cloudinary upload (falling back to local/MDB):", err);
+      }
+      if (cloudinaryUrl) {
+        return res.json({ url: cloudinaryUrl, id: `cloud-${Date.now()}` });
+      }
+      const id = `img-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
+      let extension = "png";
+      if (mimeType.includes("jpeg") || mimeType.includes("jpg")) {
+        extension = "jpg";
+      } else if (mimeType.includes("gif")) {
+        extension = "gif";
+      } else if (mimeType.includes("webp")) {
+        extension = "webp";
+      } else if (mimeType.includes("mp4")) {
+        extension = "mp4";
+      } else if (mimeType.includes("webm")) {
+        extension = "webm";
+      } else if (mimeType.includes("ogg")) {
+        extension = "ogg";
+      } else if (mimeType.includes("svg")) {
+        extension = "svg";
+      }
+      const filenameOnDisk = `${id}.${extension}`;
+      const filePath = path2.join(uploadsPath, filenameOnDisk);
+      try {
+        fs2.writeFileSync(filePath, Buffer.from(base64String, "base64"));
+        console.log(`[API Upload] Successfully saved file to disk: ${filePath}`);
+      } catch (fsErr) {
+        console.error("[API Upload] Failed to write file to local disk:", fsErr);
+      }
+      await saveUploadedImage(id, base64String, mimeType);
+      const imageUrl = `/uploads/${filenameOnDisk}`;
+      console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${imageUrl}`);
+      res.json({ url: imageUrl, id });
     } catch (err) {
       console.error("[API Upload] Fail:", err);
       res.status(500).json({ error: err.message || "Failed to process image upload database insertion" });
+    }
+  });
+  app.post("/api/test-cloudinary", async (req, res) => {
+    try {
+      const layoutSettings = await fetchLayoutSettings();
+      const cloudName = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+      const apiKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+      const apiSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+      if (!cloudName || !apiKey || !apiSecret) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing Cloudinary credentials. Please enter Cloud Name, API Key, and API Secret."
+        });
+      }
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true
+      });
+      const testPixel = "data:image/png;base64,iVBORw0KGgoAAAANSU5EUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const uploadRes = await cloudinary.uploader.upload(testPixel, {
+        folder: "pouch_supply_test",
+        public_id: `test_ping_${Date.now()}`
+      });
+      if (uploadRes && uploadRes.secure_url) {
+        return res.json({
+          success: true,
+          message: `Cloudinary active & connected successfully! Hosted test image: ${uploadRes.secure_url}`,
+          url: uploadRes.secure_url
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: "Cloudinary did not return a valid secure_url."
+        });
+      }
+    } catch (err) {
+      console.error("[Test Cloudinary] Error:", err);
+      return res.status(500).json({
+        success: false,
+        error: err?.message || "Failed to authenticate or upload to Cloudinary."
+      });
     }
   });
   app.get("/api/images/:id", async (req, res) => {
@@ -1870,7 +2019,7 @@ async function createExpressApp() {
   app.use("/api/worldpay", worldpay_default);
   app.use("/api/agechecked", agechecked_default);
   app.get("/placeholder.png", (req, res) => {
-    res.sendFile(path2.resolve(process.cwd(), "placeholder.png"));
+    res.redirect("https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80");
   });
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import("vite");

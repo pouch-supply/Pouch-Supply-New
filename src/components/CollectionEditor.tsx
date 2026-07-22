@@ -186,7 +186,7 @@ export default function CollectionEditor({
       title: title.trim(),
       description: description.trim(),
       type: type,
-      image: image || '/placeholder.png',
+      image: image || '',
       productIds: productIds,
       productConditions: productConditions || undefined,
       slug: finalSlug,

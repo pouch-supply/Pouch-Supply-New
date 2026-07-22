@@ -256,7 +256,7 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
       ];
 
   const renderStepVisualMockup = (sidx: number, step: any) => {
-    if (step.imageUrl && step.imageUrl !== '/placeholder.png' && step.imageUrl !== '') {
+    if (step.imageUrl && step.imageUrl !== '' && step.imageUrl !== 'placeholder.png') {
       return (
         <div className="w-full my-4 flex items-center justify-center overflow-hidden rounded-xl">
           <img 
@@ -1340,7 +1340,7 @@ export default function AdminDashboard({
         category: newProductForm.category || 'Vitamins & Supplements',
         vendor: newProductForm.vendor || '77',
         status: (newProductForm.status as any) || 'Active',
-        image: newProductForm.image || '/placeholder.png',
+        image: newProductForm.image || '',
         weight: Number(newProductForm.weight) || 12,
         tags: newProductForm.tags || []
       };
@@ -1520,7 +1520,7 @@ export default function AdminDashboard({
               const category = rowObj.category || "Nicotine Pouches";
               const vendor = rowObj.vendor || "Premium Brand";
               const status = (rowObj.status && ['Active', 'Draft'].includes(rowObj.status)) ? rowObj.status : 'Active';
-              const image = rowObj.image || "/placeholder.png";
+              const image = rowObj.image || "";
               const description = rowObj.description || `Premium compounding high-grade portion from ${vendor}.`;
               const weight = parseFloat(rowObj.weight) || 15;
               const weightUnit = rowObj.weightunit || "g";
@@ -1996,7 +1996,7 @@ export default function AdminDashboard({
         title: newCollectionForm.title,
         description: newCollectionForm.description || '',
         type: (newCollectionForm.type as any) || 'Manual',
-        image: newCollectionForm.image || '/placeholder.png',
+        image: newCollectionForm.image || '',
         productIds: []
       };
       onUpdateCollections([...collections, item]);
@@ -2149,19 +2149,19 @@ export default function AdminDashboard({
         columnsDesktop: sectionType === 'Blog post' ? 3 : undefined,
         columnsMobile: sectionType === 'Blog post' ? 1 : undefined,
         brandItems: (sectionType === 'Brand list' || sectionType === 'Brands we offer') ? [
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: '77 Nicotine' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Clew Pouches' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Cuba Black' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Maggie Original' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Nordic Spirit' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'XQS Sweden' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'ZYN Mint' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Pablo Strong' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Killa Double' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Fumi Fresh' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Velo Active' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'White Fox' },
-          { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'Snü Fruity' }
+          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: '77 Nicotine' },
+          { imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Clew Pouches' },
+          { imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Cuba Black' },
+          { imageUrl: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Maggie Original' },
+          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Nordic Spirit' },
+          { imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'XQS Sweden' },
+          { imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'ZYN Mint' },
+          { imageUrl: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Pablo Strong' },
+          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Killa Double' },
+          { imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Fumi Fresh' },
+          { imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Velo Active' },
+          { imageUrl: 'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'White Fox' },
+          { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'Snü Fruity' }
         ] : undefined,
         buttonText: (sectionType === 'Image banner' || sectionType === 'Image with text' || sectionType === 'Rich text' || sectionType === 'Video banner') ? 'Purchase Packs' : undefined,
         buttonLink: (sectionType === 'Image banner' || sectionType === 'Image with text' || sectionType === 'Rich text' || sectionType === 'Video banner') ? 'frontend-shop' : undefined,
@@ -2170,12 +2170,12 @@ export default function AdminDashboard({
         selectedProductIds: sectionType === 'Clearance Sale' ? localProducts.filter(p => p.status === 'Active').slice(0, 4).map(p => p.id) : undefined,
         videoUrl: sectionType === 'Video banner' ? '' : undefined,
         videoMp4Url: sectionType === 'Video banner' ? 'https://assets.mixkit.co/videos/preview/mixkit-laboratory-test-tubes-40436-large.mp4' : undefined,
-        imageUrl: (sectionType === 'Image banner' || sectionType === 'Image with text') ? '/placeholder.png' : undefined,
+        imageUrl: (sectionType === 'Image banner' || sectionType === 'Image with text') ? 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80' : undefined,
         slides: sectionType === 'Slideshow' ? [
           {
             title: 'Precision-Engineered Pouch Purity',
             description: 'Sourced directly from certified laboratories utilizing medical-grade plant fiber and vacuum-fresh locks.',
-            imageUrl: '/placeholder.png',
+            imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80',
             buttonText: 'View Laboratory Journal',
             buttonLink: 'blogs'
           },
@@ -2197,9 +2197,9 @@ export default function AdminDashboard({
           { iconName: 'Package', title: 'Never run out', description: 'Auto-refill and easy reordering.', linkUrl: 'frontend-shop' }
         ] : undefined,
         stepItems: sectionType === 'How it works' ? [
-          { number: '1', title: 'Choose your plan', description: 'Select one of our flexible subscription plans', imageUrl: '/placeholder.png' },
-          { number: '2', title: 'Choose your pouches', description: 'Mix and match your favourite brands, flavours and strengths. (these can be changed at anytime)', imageUrl: '/placeholder.png' },
-          { number: '3', title: 'We handle the rest', description: 'Delivered automatically to your door hassle free weekly, Bi-weekly or monthly', imageUrl: '/placeholder.png' }
+          { number: '1', title: 'Choose your plan', description: 'Select one of our flexible subscription plans', imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80' },
+          { number: '2', title: 'Choose your pouches', description: 'Mix and match your favourite brands, flavours and strengths. (these can be changed at anytime)', imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=400&q=80' },
+          { number: '3', title: 'We handle the rest', description: 'Delivered automatically to your door hassle free weekly, Bi-weekly or monthly', imageUrl: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=400&q=80' }
         ] : undefined,
         trustBadges: sectionType === 'Trust badges' ? [
           { iconType: 'badge', title: '100% AUTHENTIC', description: 'Direct from official suppliers.' },
@@ -4078,7 +4078,7 @@ export default function AdminDashboard({
                         title: '',
                         description: '',
                         type: 'Manual',
-                        image: '/placeholder.png',
+                        image: '',
                         productIds: []
                       })}
                       className="bg-slate-900 hover:bg-slate-850 font-bold p-2.5 px-4 rounded-xl text-xs text-white flex items-center gap-1 shadow-xs cursor-pointer"
@@ -5122,7 +5122,7 @@ export default function AdminDashboard({
                                   <div className="text-center space-y-3 py-4">
                                     <div className="relative h-28 w-full rounded-xl bg-slate-100 overflow-hidden border">
                                       <img 
-                                        src={sec.settings.imageUrl || '/placeholder.png'} 
+                                        src={sec.settings.imageUrl || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'} 
                                         className="h-full w-full object-cover" 
                                         alt="" 
                                         referrerPolicy="no-referrer"
@@ -5146,7 +5146,7 @@ export default function AdminDashboard({
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center py-4 text-left">
                                     <div className="h-28 w-full rounded-xl bg-slate-50 border overflow-hidden relative shadow-inner">
                                       <img 
-                                        src={sec.settings.imageUrl || '/placeholder.png'} 
+                                        src={sec.settings.imageUrl || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80'} 
                                         className="h-full w-full object-cover" 
                                         alt="" 
                                         referrerPolicy="no-referrer"
@@ -5175,9 +5175,9 @@ export default function AdminDashboard({
                                     <p className="text-[9.5px] text-slate-450 max-w-md mx-auto leading-snug">{sec.settings.description}</p>
                                     <div className="grid grid-cols-3 gap-2 pt-2">
                                       {[
-                                        { label: 'Global Testing', badge: 'LAB VERIFIED', img: '/placeholder.png' },
-                                        { label: 'Aroma Boost', badge: '100% FREE', img: '/placeholder.png' },
-                                        { label: 'Vacuum Sealed', badge: 'FRESH LOCK', img: '/placeholder.png' }
+                                        { label: 'Global Testing', badge: 'LAB VERIFIED', img: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=200&q=80' },
+                                        { label: 'Aroma Boost', badge: '100% FREE', img: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=200&q=80' },
+                                        { label: 'Vacuum Sealed', badge: 'FRESH LOCK', img: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=200&q=80' }
                                       ].map((col, cIdx) => (
                                         <div key={cIdx} className="bg-slate-50 border border-slate-200/60 rounded-xl p-2 text-center text-[9px] hover:shadow-2xs transition-shadow">
                                           <div className="h-10 bg-slate-200 min-w-full rounded-md mb-1 bg-cover bg-center overflow-hidden">
@@ -5495,7 +5495,7 @@ export default function AdminDashboard({
                                     {/* background cover Image */}
                                     <div className="absolute inset-0 z-0">
                                       <img 
-                                        src={sec.settings.slides?.[activeSlideEditIndex]?.imageUrl || sec.settings.imageUrl || '/placeholder.png'} 
+                                        src={sec.settings.slides?.[activeSlideEditIndex]?.imageUrl || sec.settings.imageUrl || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80'} 
                                         className="w-full h-full object-cover opacity-50" 
                                         alt="" 
                                         referrerPolicy="no-referrer"
@@ -6113,7 +6113,7 @@ export default function AdminDashboard({
                                   const newSlide = {
                                     title: 'Precision-Engineered Purity',
                                     description: 'Direct laboratory dispatch. Clinically tested 100% tobacco-free.',
-                                    imageUrl: '/placeholder.png',
+                                    imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80',
                                     buttonText: 'Purchase Packs',
                                     buttonLink: 'frontend-shop'
                                   };
@@ -6541,7 +6541,7 @@ export default function AdminDashboard({
                                 type="button"
                                 onClick={() => {
                                   const list = currentlyEditingSection.settings.brandItems || [];
-                                  const updated = [...list, { imageUrl: '/placeholder.png', linkUrl: 'frontend-shop', title: 'New Brand' }];
+                                  const updated = [...list, { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'New Brand' }];
                                   handleUpdateSectionSettings('brandItems', updated);
                                 }}
                                 className="text-[9px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 p-1 px-2 rounded-md font-bold transition-all cursor-pointer uppercase tracking-wider"
@@ -6625,7 +6625,7 @@ export default function AdminDashboard({
                                 type="button"
                                 onClick={() => {
                                   const list = currentlyEditingSection.settings.stepItems || [];
-                                  const updated = [...list, { number: String(list.length + 1), title: 'New Step', description: 'Enter step details here', imageUrl: '/placeholder.png' }];
+                                  const updated = [...list, { number: String(list.length + 1), title: 'New Step', description: 'Enter step details here', imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80' }];
                                   handleUpdateSectionSettings('stepItems', updated);
                                 }}
                                 className="text-[9px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 p-1 px-2 rounded-md font-bold transition-all cursor-pointer uppercase tracking-wider"

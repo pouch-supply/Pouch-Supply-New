@@ -260,10 +260,14 @@ export default function ProductDetailView({
           <div className="space-y-4">
             <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden aspect-square flex items-center justify-center p-2 relative group">
               <img
-                src={selectedImage || '/placeholder.png'}
+                src={selectedImage || 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=600&q=80'}
                 alt={activeVariant ? `${product.title} ${activeVariant.name}` : product.title}
                 className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.style.display = 'none';
+                }}
               />
               <span className="absolute top-4 left-4 bg-indigo-600 text-white text-[9px] font-black uppercase py-1 px-3 rounded-full border border-indigo-500 tracking-wider">
                 {product.vendor}
