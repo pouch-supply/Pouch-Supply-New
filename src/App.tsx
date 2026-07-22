@@ -659,56 +659,56 @@ export default function App() {
   // --- Write to LocalStorage AND MongoDB Database on Changes ---
   useEffect(() => {
     safeSaveToLocalStorage('ps_products', products);
-    if (isInitialLoadDone && loadedProductsSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('products', products);
     }
   }, [products, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_collections', collections);
-    if (isInitialLoadDone && loadedCollectionsSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('collections', collections);
     }
   }, [collections, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_orders', orders);
-    if (isInitialLoadDone && loadedOrdersSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('orders', orders);
     }
   }, [orders, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_files', files);
-    if (isInitialLoadDone && loadedFilesSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('files', files);
     }
   }, [files, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_customers', customers);
-    if (isInitialLoadDone && loadedCustomersSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('customers', customers);
     }
   }, [customers, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_discounts', discounts);
-    if (isInitialLoadDone && loadedDiscountsSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('discounts', discounts);
     }
   }, [discounts, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_custom_pages', customPages);
-    if (isInitialLoadDone && loadedPagesSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('custompages', customPages);
     }
   }, [customPages, isInitialLoadDone]);
 
   useEffect(() => {
     safeSaveToLocalStorage('ps_blogs', blogs);
-    if (isInitialLoadDone && loadedBlogsSuccess.current) {
+    if (isInitialLoadDone) {
       syncToApi('blogs', blogs);
     }
   }, [blogs, isInitialLoadDone]);

@@ -360,7 +360,7 @@ export async function createExpressApp() {
   app.use("/api/worldpay", worldpayRouter);
   app.use("/api/agechecked", agecheckedRouter);
 
-  // Serve placeholder.png directly from root workspace to handle all environments smoothly
+  // Fallback endpoint for legacy image requests
   app.get("/placeholder.png", (req, res) => {
     res.redirect("https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80");
   });

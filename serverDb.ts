@@ -32,16 +32,23 @@ const memoryCache: Record<string, any[]> = {
   blogs: [...INITIAL_BLOGS],
 };
 
+function normalizeResourceName(resource: string): string {
+  if (!resource) return resource;
+  const lower = resource.toLowerCase();
+  if (lower === 'custompages') return 'customPages';
+  return resource;
+}
+
 function getModelForResource(resource: string) {
-  switch (resource) {
+  const norm = normalizeResourceName(resource);
+  switch (norm) {
     case 'products': return ProductModel;
     case 'collections': return CollectionModel;
     case 'orders': return OrderModel;
     case 'files': return FileModel;
     case 'customers': return CustomerModel;
     case 'discounts': return DiscountModel;
-    case 'customPages':
-    case 'custompages': return CustomPageModel;
+    case 'customPages': return CustomPageModel;
     case 'blogs': return BlogModel;
     default: return null;
   }
@@ -188,10 +195,11 @@ export async function getDb(): Promise<any | null> {
 
 // Global resource controllers that fetch from Mongoose DB or fallback to memory
 export async function fetchResource(resource: string): Promise<any[]> {
+  const normResource = normalizeResourceName(resource);
   const mongoUri = process.env.MONGODB_URI;
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource) as any;
+    const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
       const docs = await Model.find({}).lean().exec();
       // Remove Mongoose/Mongo specific identifiers to map clean object models for the front-end
@@ -200,30 +208,34 @@ export async function fetchResource(resource: string): Promise<any[]> {
         return cleanDoc;
       });
     } else if (mongoUri) {
-      console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${resource}".`);
+      console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${normResource}".`);
     }
   } catch (error: any) {
-    console.error(`[fetchResource] Error fetching "${resource}", falling back to memoryCache:`, error);
+    console.error(`[fetchResource] Error fetching "${normResource}", falling back to memoryCache:`, error);
   }
-  return memoryCache[resource] || [];
+  return memoryCache[normResource] || memoryCache[resource] || [];
 }
 
 export async function saveResource(resource: string, list: any[]): Promise<any[]> {
+  const normResource = normalizeResourceName(resource);
   // Synchronously update local fallback cache
-  memoryCache[resource] = [...list];
+  memoryCache[normResource] = [...list];
+  if (normResource !== resource) {
+    memoryCache[resource] = memoryCache[normResource];
+  }
 
   const mongoUri = process.env.MONGODB_URI;
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource) as any;
+    const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
       const currentIds = list.map(item => item.id).filter(Boolean);
-      console.log(`[saveResource] Syncing ${resource} collection. Total items in payload: ${list.length}. Active IDs:`, currentIds);
+      console.log(`[saveResource] Syncing ${normResource} collection. Total items in payload: ${list.length}. Active IDs:`, currentIds);
       
       // Delete items no longer in client list
       const deleteResult = await Model.deleteMany({ id: { $nin: currentIds } });
       if (deleteResult.deletedCount > 0) {
-        console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${resource} not in active client list.`);
+        console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${normResource} not in active client list.`);
       }
       
       // Upsert current items using replaceOne to avoid duplicate or outdated structures
@@ -233,21 +245,22 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
         const { _id, __v, ...cleanItem } = item;
         await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
       }
-      console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${resource} collection.`);
+      console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;
     } else if (mongoUri) {
-      console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${resource}".`);
+      console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${normResource}".`);
     }
   } catch (error: any) {
-    console.error(`[saveResource] Error during database synchronization for "${resource}", saved to memoryCache fallback:`, error);
+    console.error(`[saveResource] Error during database synchronization for "${normResource}", saved to memoryCache fallback:`, error);
   }
-  return memoryCache[resource];
+  return memoryCache[normResource];
 }
 
 export async function fetchSingleItem(resource: string, id: string): Promise<any | null> {
+  const normResource = normalizeResourceName(resource);
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource) as any;
+    const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
       const doc = await Model.findOne({ id }).lean().exec();
       if (doc) {
@@ -257,9 +270,9 @@ export async function fetchSingleItem(resource: string, id: string): Promise<any
       return null;
     }
   } catch (err) {
-    console.error(`[fetchSingleItem] Error fetching "${resource}" item ${id}:`, err);
+    console.error(`[fetchSingleItem] Error fetching "${normResource}" item ${id}:`, err);
   }
-  const items = memoryCache[resource] || [];
+  const items = memoryCache[normResource] || memoryCache[resource] || [];
   return items.find((i: any) => i.id === id) || null;
 }
 
@@ -267,49 +280,57 @@ export async function saveSingleItem(resource: string, item: any): Promise<any> 
   if (!item || !item.id) {
     throw new Error("Item must have a valid 'id' field");
   }
+  const normResource = normalizeResourceName(resource);
   
   // Update memory cache
-  const items = memoryCache[resource] || [];
+  const items = memoryCache[normResource] || memoryCache[resource] || [];
   const existingIdx = items.findIndex((i: any) => i.id === item.id);
   if (existingIdx !== -1) {
     items[existingIdx] = { ...item };
   } else {
     items.push({ ...item });
   }
-  memoryCache[resource] = items;
+  memoryCache[normResource] = items;
+  if (normResource !== resource) {
+    memoryCache[resource] = items;
+  }
 
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource) as any;
+    const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
       const { _id, __v, ...cleanItem } = item;
       await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
-      console.log(`[saveSingleItem] Upserted item ${item.id} into "${resource}" collection.`);
+      console.log(`[saveSingleItem] Upserted item ${item.id} into "${normResource}" collection.`);
     }
   } catch (err) {
-    console.error(`[saveSingleItem] Error saving item ${item.id} to "${resource}":`, err);
+    console.error(`[saveSingleItem] Error saving item ${item.id} to "${normResource}":`, err);
   }
   return item;
 }
 
 export async function deleteSingleItem(resource: string, id: string): Promise<boolean> {
   if (!id) return false;
+  const normResource = normalizeResourceName(resource);
 
   // Update memory cache
-  if (memoryCache[resource]) {
+  if (memoryCache[normResource]) {
+    memoryCache[normResource] = memoryCache[normResource].filter((i: any) => i.id !== id);
+  }
+  if (normResource !== resource && memoryCache[resource]) {
     memoryCache[resource] = memoryCache[resource].filter((i: any) => i.id !== id);
   }
 
   try {
     const conn = await connectMongoose();
-    const Model = getModelForResource(resource) as any;
+    const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
       const res = await Model.deleteOne({ id });
-      console.log(`[deleteSingleItem] Deleted item ${id} from "${resource}" collection. Deleted count: ${res.deletedCount}`);
+      console.log(`[deleteSingleItem] Deleted item ${id} from "${normResource}" collection. Deleted count: ${res.deletedCount}`);
       return res.deletedCount > 0;
     }
   } catch (err) {
-    console.error(`[deleteSingleItem] Error deleting item ${id} from "${resource}":`, err);
+    console.error(`[deleteSingleItem] Error deleting item ${id} from "${normResource}":`, err);
   }
   return true;
 }

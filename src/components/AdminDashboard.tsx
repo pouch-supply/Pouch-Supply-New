@@ -256,7 +256,7 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
       ];
 
   const renderStepVisualMockup = (sidx: number, step: any) => {
-    if (step.imageUrl && step.imageUrl !== '' && step.imageUrl !== 'placeholder.png') {
+    if (step.imageUrl && step.imageUrl.trim() !== '') {
       return (
         <div className="w-full my-4 flex items-center justify-center overflow-hidden rounded-xl">
           <img 
