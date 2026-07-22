@@ -247,9 +247,24 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
 // Memory cache buffer for uploaded files when MongoDB is offline
 const memoryImages: Record<string, { base64Data: string; mimeType: string }> = {};
 
+function sanitizeBase64(raw: string): string {
+  if (!raw) return '';
+  if (raw.includes(';base64,')) {
+    return raw.split(';base64,').pop() || raw;
+  }
+  return raw.replace(/^data:[^;]+;base64,/, '').trim();
+}
+
 export async function saveUploadedImage(id: string, base64Data: string, mimeType: string): Promise<string> {
+  const cleanData = sanitizeBase64(base64Data);
   // Store in memory cache fallback
-  memoryImages[id] = { base64Data, mimeType };
+  memoryImages[id] = { base64Data: cleanData, mimeType };
+
+  const dotIdx = id.lastIndexOf('.');
+  const bareId = dotIdx !== -1 ? id.substring(0, dotIdx) : id;
+  if (bareId !== id) {
+    memoryImages[bareId] = { base64Data: cleanData, mimeType };
+  }
 
   // Sync to Mongoose MongoDB Atlas if connected
   try {
@@ -258,9 +273,16 @@ export async function saveUploadedImage(id: string, base64Data: string, mimeType
       const UploadedModel = UploadedImageModel as any;
       await UploadedModel.replaceOne(
         { id },
-        { id, base64Data, mimeType },
+        { id, base64Data: cleanData, mimeType },
         { upsert: true }
       );
+      if (bareId !== id) {
+        await UploadedModel.replaceOne(
+          { id: bareId },
+          { id: bareId, base64Data: cleanData, mimeType },
+          { upsert: true }
+        );
+      }
       console.log(`[MongoDB Sync] Successfully saved image to Atlas database for ID: ${id}`);
     }
   } catch (error) {
@@ -272,9 +294,15 @@ export async function saveUploadedImage(id: string, base64Data: string, mimeType
 }
 
 export async function getUploadedImage(id: string): Promise<{ base64Data: string; mimeType: string } | null> {
+  const dotIdx = id.lastIndexOf('.');
+  const bareId = dotIdx !== -1 ? id.substring(0, dotIdx) : id;
+
   // 1. Check local in-memory cache first
   if (memoryImages[id]) {
     return memoryImages[id];
+  }
+  if (memoryImages[bareId]) {
+    return memoryImages[bareId];
   }
 
   // 2. Check local uploads folder on disk as a tertiary fallback for older local images
@@ -285,7 +313,7 @@ export async function getUploadedImage(id: string): Promise<{ base64Data: string
     }
     if (fs.existsSync(uploadsDir)) {
       const files = fs.readdirSync(uploadsDir);
-      const matchedFile = files.find(f => f.startsWith(id + '.'));
+      const matchedFile = files.find(f => f.startsWith(id + '.') || f.startsWith(bareId + '.'));
       if (matchedFile) {
         const filePath = path.join(uploadsDir, matchedFile);
         const buffer = fs.readFileSync(filePath);
@@ -299,7 +327,10 @@ export async function getUploadedImage(id: string): Promise<{ base64Data: string
         else if (matchedFile.endsWith('.mp4')) mimeType = 'video/mp4';
         else if (matchedFile.endsWith('.webm')) mimeType = 'video/webm';
 
-        return { base64Data, mimeType };
+        const result = { base64Data, mimeType };
+        memoryImages[id] = result;
+        memoryImages[bareId] = result;
+        return result;
       }
     }
   } catch (err) {
@@ -311,14 +342,17 @@ export async function getUploadedImage(id: string): Promise<{ base64Data: string
     const conn = await connectMongoose();
     if (conn) {
       const UploadedModel = UploadedImageModel as any;
-      const doc = await UploadedModel.findOne({ id }).lean().exec();
+      const doc = await UploadedModel.findOne({ $or: [{ id }, { id: bareId }] }).lean().exec();
       if (doc) {
-        // Cache in memory for subsequent requests
-        memoryImages[id] = { base64Data: doc.base64Data, mimeType: doc.mimeType };
-        return {
-          base64Data: doc.base64Data,
-          mimeType: doc.mimeType
+        const cleanData = sanitizeBase64(doc.base64Data);
+        const result = {
+          base64Data: cleanData,
+          mimeType: doc.mimeType || 'image/png'
         };
+        // Cache in memory for subsequent requests
+        memoryImages[id] = result;
+        memoryImages[bareId] = result;
+        return result;
       }
     }
   } catch (error) {

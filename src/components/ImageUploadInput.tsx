@@ -139,6 +139,15 @@ export default function ImageUploadInput({
                 className="h-full w-full object-cover" 
                 alt="Upload thumbnail" 
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.onerror = null;
+                  if (typeof value === 'string' && value.startsWith('data:')) {
+                    target.src = value;
+                  } else {
+                    target.src = 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=150&q=80';
+                  }
+                }}
               />
               <button
                 type="button"

@@ -1,9 +1,21 @@
 export function cleanMediaUrl(url?: string): string {
   if (!url) return '';
   if (typeof url !== 'string') return '';
-  // Convert any domain prefix like http://localhost:3000/uploads/... or https://pouch-supply.com/uploads/... to relative /uploads/... or /api/images/...
-  if (url.includes('/uploads/') || url.includes('/api/images/')) {
-    return url.replace(/^https?:\/\/[^/]+(\/(?:uploads|api\/images)\/.+)$/, '$1');
+  let trimmed = url.trim();
+  if (trimmed.includes('/uploads/') || trimmed.includes('/api/images/')) {
+    trimmed = trimmed.replace(/^https?:\/\/[^/]+(\/(?:uploads|api\/images)\/.+)$/, '$1');
   }
-  return url;
+  if (trimmed.startsWith('uploads/') || trimmed.startsWith('api/images/')) {
+    trimmed = '/' + trimmed;
+  }
+  return trimmed;
 }
+
+export function cleanBase64String(raw: string): string {
+  if (!raw) return '';
+  if (raw.includes(';base64,')) {
+    return raw.split(';base64,').pop() || raw;
+  }
+  return raw.replace(/^data:[^;]+;base64,/, '').trim();
+}
+

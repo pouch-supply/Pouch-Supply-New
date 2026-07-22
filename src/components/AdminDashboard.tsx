@@ -10,6 +10,7 @@ import {
   Pencil, Copy, Bold, Italic, Underline, AlignLeft, Link, Calendar, ArrowLeft, MoreHorizontal, Code, FileEdit, LogOut, Download, Upload
 } from 'lucide-react';
 import ImageUploadInput from './ImageUploadInput';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 import CollectionEditor from './CollectionEditor';
 import ProductEditor from './ProductEditor';
 import BlogContentEditor from './BlogContentEditor';
@@ -8673,7 +8674,7 @@ export default function AdminDashboard({
                       {imageValue ? (
                         <div className="relative border border-slate-200 rounded-xl overflow-hidden group bg-slate-50">
                           <img 
-                            src={imageValue} 
+                            src={cleanMediaUrl(imageValue)} 
                             alt="Blog Cover" 
                             referrerPolicy="no-referrer"
                             className="w-full h-36 object-cover" 

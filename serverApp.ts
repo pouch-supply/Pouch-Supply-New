@@ -100,13 +100,18 @@ export async function createExpressApp() {
       let base64String = data;
       let mimeType = "image/png";
 
-      if (data.startsWith("data:")) {
+      if (typeof data === "string" && data.startsWith("data:")) {
         const matches = data.match(/^data:([^;]+);base64,(.+)$/);
         if (matches && matches.length === 3) {
           mimeType = matches[1];
           base64String = matches[2];
         }
       }
+
+      if (typeof base64String === "string" && base64String.includes(";base64,")) {
+        base64String = base64String.split(";base64,").pop() || base64String;
+      }
+      base64String = (base64String || "").trim();
 
       // Optional Cloudinary Upload proxy
       let cloudinaryUrl: string | null = null;
