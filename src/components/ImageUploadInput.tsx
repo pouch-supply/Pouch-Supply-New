@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 
 interface ImageUploadInputProps {
   label: string;
@@ -134,7 +135,7 @@ export default function ImageUploadInput({
           <div className="space-y-2 w-full flex flex-col items-center relative py-1">
             <div className="relative h-16 w-16 rounded-md border border-slate-150 overflow-hidden bg-white flex items-center justify-center shadow-xs">
               <img 
-                src={value.replace(/^https?:\/\/[^/]+(\/uploads\/.+)$/, '$1')} 
+                src={cleanMediaUrl(value)} 
                 className="h-full w-full object-cover" 
                 alt="Upload thumbnail" 
                 referrerPolicy="no-referrer"

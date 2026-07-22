@@ -6,6 +6,7 @@ import {
   CheckSquare, Square, Eye, Copy, HardDrive, Info, AlertCircle, Play, Sparkle
 } from 'lucide-react';
 import ImageUploadInput from './ImageUploadInput';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 
 interface ProductEditorProps {
   product: Product | null; // null if creating a new one
@@ -784,7 +785,7 @@ export default function ProductEditor({
                     index === 0 ? 'border-emerald-600 ring-2 ring-emerald-500/10' : 'border-slate-200 hover:border-slate-350'
                   }`}
                 >
-                  <img src={url} className="h-full w-full object-cover rounded-lg" alt="" referrerPolicy="no-referrer" />
+                  <img src={cleanMediaUrl(url)} className="h-full w-full object-cover rounded-lg" alt="" referrerPolicy="no-referrer" />
                   
                   {/* Absolute tags index label */}
                   <span className={`absolute top-1.5 left-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 rounded ${

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Product, Collection, Customer } from '../types';
+import { cleanMediaUrl } from '../utils/mediaUtils';
 import { 
   Search, Heart, ArrowUpDown, Tag, ShoppingCart, Info, Sparkles, 
   Grid, List, Check, CheckCircle2, ChevronRight, HelpCircle, 
@@ -1147,7 +1148,7 @@ export default function ProductsGrid({
                       <div className="w-11 h-11 rounded-full bg-slate-50 border border-slate-150/80 p-1.5 relative flex items-center justify-center group-hover:border-slate-350 transition-colors shadow-xs">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(226,232,240,0.7)_0%,transparent_70%)]" />
                         <img 
-                          src={p.image} 
+                          src={cleanMediaUrl(p.image)} 
                           alt={p.title} 
                           className="w-8 h-8 object-contain relative z-10 group-hover:scale-108 transition-transform" 
                           referrerPolicy="no-referrer"
@@ -1326,7 +1327,7 @@ export default function ProductsGrid({
                 {quizResult ? (
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 flex flex-col items-center">
                     <img 
-                      src={quizResult.image} 
+                      src={cleanMediaUrl(quizResult.image)} 
                       alt={quizResult.title} 
                       className="w-20 h-20 object-contain" 
                       referrerPolicy="no-referrer"

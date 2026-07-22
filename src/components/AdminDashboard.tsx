@@ -803,6 +803,35 @@ export default function AdminDashboard({
   }, [layoutSettings]);
 
   const [layoutSavedToast, setLayoutSavedToast] = useState(false);
+  const [testingCloudinary, setTestingCloudinary] = useState(false);
+  const [cloudinaryTestResult, setCloudinaryTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestCloudinary = async () => {
+    setTestingCloudinary(true);
+    setCloudinaryTestResult(null);
+    try {
+      const res = await fetch('/api/test-cloudinary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cloudName: localLayoutSettings.cloudinaryCloudName,
+          apiKey: localLayoutSettings.cloudinaryApiKey,
+          apiSecret: localLayoutSettings.cloudinaryApiSecret
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCloudinaryTestResult({ success: true, message: data.message });
+      } else {
+        setCloudinaryTestResult({ success: false, message: data.error || 'Failed to connect to Cloudinary.' });
+      }
+    } catch (err: any) {
+      setCloudinaryTestResult({ success: false, message: err.message || 'Server error testing Cloudinary connection.' });
+    } finally {
+      setTestingCloudinary(false);
+    }
+  };
+
   const [isAddingMenuItem, setIsAddingMenuItem] = useState(false);
   const [newMenuItemLabel, setNewMenuItemLabel] = useState('');
   const [newMenuItemTarget, setNewMenuItemTarget] = useState('frontend-home');
@@ -9114,6 +9143,38 @@ export default function AdminDashboard({
                   />
                 </div>
               </div>
+
+              <div className="pt-1 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={handleTestCloudinary}
+                  disabled={testingCloudinary}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold text-[10px] uppercase tracking-wider px-3.5 py-2 rounded-lg shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  {testingCloudinary ? (
+                    <>
+                      <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Testing Connection...
+                    </>
+                  ) : (
+                    <>
+                      <Cloud className="h-3.5 w-3.5" />
+                      Test Cloudinary Connection
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {cloudinaryTestResult && (
+                <div className={`p-2.5 rounded-lg text-xs font-semibold leading-relaxed border ${
+                  cloudinaryTestResult.success 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  {cloudinaryTestResult.message}
+                </div>
+              )}
+
               <p className="text-[8.5px] text-slate-400 mt-1.5 leading-normal">
                 Credentials are saved securely. You can also specify them as environment variables (<code>CLOUDINARY_CLOUD_NAME</code>, etc.). Register for free at <a href="https://cloudinary.com/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">cloudinary.com</a>.
               </p>

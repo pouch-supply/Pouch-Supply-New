@@ -1,15 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { CustomPage, PageSection, Product, Collection, Customer, BlogPost } from '../types';
-
-export function cleanMediaUrl(url?: string): string {
-  if (!url) return '';
-  if (url.includes('/uploads/')) {
-    if (url.includes('localhost:3000') || url.includes('127.0.0.1:3000') || url.includes('pouch-supply.com')) {
-      return url.replace(/^https?:\/\/[^/]+(\/uploads\/.+)$/, '$1');
-    }
-  }
-  return url;
-}
+import { cleanMediaUrl } from '../utils/mediaUtils';
 import { 
   ArrowRight, ShoppingCart, Star, Heart, FileText, Check, 
   ChevronDown, ChevronUp, Play, Sparkles, TrendingUp, Plus, Minus, ShieldCheck, Award, Eye, Flame, ArrowUpRight, BookOpen, Layers,

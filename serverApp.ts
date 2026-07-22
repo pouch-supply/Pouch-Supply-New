@@ -202,19 +202,61 @@ export async function createExpressApp() {
       // Return the static uploads url which supports byte ranges for videos
       const imageUrl = `/uploads/${filenameOnDisk}`;
       
-      // Use relative URL by default so the browser loads directly without localhost:3000 domain mismatch
-      let returnUrl = imageUrl;
-      const xHost = req.headers["x-forwarded-host"] as string;
-      if (xHost && !xHost.includes("localhost") && !xHost.includes("127.0.0.1")) {
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        returnUrl = `${protocol}://${xHost}${imageUrl}`;
-      }
-
-      console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${returnUrl}`);
-      res.json({ url: returnUrl, id });
+      // Always return relative URL so the browser loads directly from current origin without domain mismatch
+      console.log(`[API Upload] Successfully persisted ${mimeType} media. Final URL: ${imageUrl}`);
+      res.json({ url: imageUrl, id });
     } catch (err: any) {
       console.error("[API Upload] Fail:", err);
       res.status(500).json({ error: err.message || "Failed to process image upload database insertion" });
+    }
+  });
+
+  // API Route: Test Cloudinary Connection & Credentials
+  app.post("/api/test-cloudinary", async (req, res) => {
+    try {
+      const layoutSettings = await fetchLayoutSettings();
+      const cloudName = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+      const apiKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+      const apiSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+
+      if (!cloudName || !apiKey || !apiSecret) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing Cloudinary credentials. Please enter Cloud Name, API Key, and API Secret."
+        });
+      }
+
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true
+      });
+
+      const testPixel = "data:image/png;base64,iVBORw0KGgoAAAANSU5EUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const uploadRes = await cloudinary.uploader.upload(testPixel, {
+        folder: "pouch_supply_test",
+        public_id: `test_ping_${Date.now()}`
+      });
+
+      if (uploadRes && uploadRes.secure_url) {
+        return res.json({
+          success: true,
+          message: `Cloudinary active & connected successfully! Hosted test image: ${uploadRes.secure_url}`,
+          url: uploadRes.secure_url
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: "Cloudinary did not return a valid secure_url."
+        });
+      }
+    } catch (err: any) {
+      console.error("[Test Cloudinary] Error:", err);
+      return res.status(500).json({
+        success: false,
+        error: err?.message || "Failed to authenticate or upload to Cloudinary."
+      });
     }
   });
 
