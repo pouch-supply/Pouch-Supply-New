@@ -16,6 +16,41 @@ import blogsRouter from "./backend/routes/blogs";
 import worldpayRouter from "./backend/routes/worldpay";
 import agecheckedRouter from "./backend/routes/agechecked";
 
+export function parseCloudinaryCredentials(rawCloudName?: string, rawApiKey?: string, rawApiSecret?: string) {
+  let cloudName = (rawCloudName || "").trim();
+  let apiKey = (rawApiKey || "").trim();
+  let apiSecret = (rawApiSecret || "").trim();
+
+  // Combine to check for cloudinary:// or CLOUDINARY_URL format in any field
+  const combined = `${cloudName} ${apiKey} ${apiSecret}`;
+  const urlMatch = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
+  if (urlMatch) {
+    apiKey = apiKey || urlMatch[1].trim();
+    apiSecret = apiSecret || urlMatch[2].trim();
+    cloudName = urlMatch[3].trim();
+  } else {
+    if (cloudName.startsWith("CLOUDINARY_URL=")) {
+      cloudName = cloudName.replace("CLOUDINARY_URL=", "").trim();
+    }
+    if (cloudName.includes("@")) {
+      const parts = cloudName.split("@");
+      cloudName = parts[1].trim();
+      const left = parts[0].replace(/.*cloudinary:\/\//i, "").trim();
+      const keySecret = left.split(":");
+      if (keySecret.length === 2) {
+        apiKey = apiKey || keySecret[0].trim();
+        apiSecret = apiSecret || keySecret[1].trim();
+      }
+    }
+  }
+
+  if (cloudName.toLowerCase() === "pouch" || cloudName.toLowerCase() === "pouch supply") {
+    cloudName = "";
+  }
+
+  return { cloudName, apiKey, apiSecret };
+}
+
 export async function createExpressApp() {
   const app = express();
 
@@ -118,41 +153,6 @@ export async function createExpressApp() {
         base64String = base64String.split(";base64,").pop() || base64String;
       }
       base64String = (base64String || "").trim();
-
-function parseCloudinaryCredentials(rawCloudName?: string, rawApiKey?: string, rawApiSecret?: string) {
-  let cloudName = (rawCloudName || "").trim();
-  let apiKey = (rawApiKey || "").trim();
-  let apiSecret = (rawApiSecret || "").trim();
-
-  // Combine to check for cloudinary:// or CLOUDINARY_URL format in any field
-  const combined = `${cloudName} ${apiKey} ${apiSecret}`;
-  const urlMatch = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
-  if (urlMatch) {
-    apiKey = apiKey || urlMatch[1].trim();
-    apiSecret = apiSecret || urlMatch[2].trim();
-    cloudName = urlMatch[3].trim();
-  } else {
-    if (cloudName.startsWith("CLOUDINARY_URL=")) {
-      cloudName = cloudName.replace("CLOUDINARY_URL=", "").trim();
-    }
-    if (cloudName.includes("@")) {
-      const parts = cloudName.split("@");
-      cloudName = parts[1].trim();
-      const left = parts[0].replace(/.*cloudinary:\/\//i, "").trim();
-      const keySecret = left.split(":");
-      if (keySecret.length === 2) {
-        apiKey = apiKey || keySecret[0].trim();
-        apiSecret = apiSecret || keySecret[1].trim();
-      }
-    }
-  }
-
-  if (cloudName.toLowerCase() === "pouch" || cloudName.toLowerCase() === "pouch supply") {
-    cloudName = "";
-  }
-
-  return { cloudName, apiKey, apiSecret };
-}
 
       // Optional Cloudinary Upload proxy
       let cloudinaryUrl: string | null = null;

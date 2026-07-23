@@ -4,6 +4,40 @@ import path2 from "path";
 import fs2 from "fs";
 import { v2 as cloudinary } from "cloudinary";
 
+function parseCloudinaryCredentials(rawCloudName, rawApiKey, rawApiSecret) {
+  let cloudName = (rawCloudName || "").trim();
+  let apiKey = (rawApiKey || "").trim();
+  let apiSecret = (rawApiSecret || "").trim();
+
+  const combined = `${cloudName} ${apiKey} ${apiSecret}`;
+  const urlMatch = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
+  if (urlMatch) {
+    apiKey = apiKey || urlMatch[1].trim();
+    apiSecret = apiSecret || urlMatch[2].trim();
+    cloudName = urlMatch[3].trim();
+  } else {
+    if (cloudName.startsWith("CLOUDINARY_URL=")) {
+      cloudName = cloudName.replace("CLOUDINARY_URL=", "").trim();
+    }
+    if (cloudName.includes("@")) {
+      const parts = cloudName.split("@");
+      cloudName = parts[1].trim();
+      const left = parts[0].replace(/.*cloudinary:\/\//i, "").trim();
+      const keySecret = left.split(":");
+      if (keySecret.length === 2) {
+        apiKey = apiKey || keySecret[0].trim();
+        apiSecret = apiSecret || keySecret[1].trim();
+      }
+    }
+  }
+
+  if (cloudName.toLowerCase() === "pouch" || cloudName.toLowerCase() === "pouch supply") {
+    cloudName = "";
+  }
+
+  return { cloudName, apiKey, apiSecret };
+}
+
 // serverDb.ts
 import fs from "fs";
 import path from "path";
@@ -572,12 +606,10 @@ async function fetchResource(resource) {
         const { _id, __v, ...cleanDoc } = doc;
         return cleanDoc;
       });
-    } else if (mongoUri) {
-      console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${normResource}".`);
+    } else {
     }
   } catch (error) {
     checkAndResetOnNetworkError(error);
-    console.warn(`[fetchResource] Database fetch for "${normResource}" unavailable (${error?.message || "Network/SSL error"}), falling back to memoryCache.`);
   }
   return memoryCache[normResource] || memoryCache[resource] || [];
 }
@@ -613,12 +645,10 @@ async function saveResource(resource, list) {
       }
       console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;
-    } else if (mongoUri) {
-      console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${normResource}".`);
+    } else {
     }
   } catch (error) {
     checkAndResetOnNetworkError(error);
-    console.warn(`[saveResource] Error during database synchronization for "${normResource}" (${error?.message || "Network/SSL error"}), saved to memoryCache fallback.`);
   }
   return memoryCache[normResource];
 }
@@ -860,7 +890,22 @@ async function fetchLayoutSettings() {
   return defaultSettings;
 }
 async function saveLayoutSettings(settings) {
-  const payload = { ...settings, id: "layout_settings" };
+  let existing = {};
+  try {
+    existing = await fetchLayoutSettings();
+  } catch (e) {
+  }
+  const payload = {
+    headerLogoText: "POUCH SUPPLY",
+    headerLogoSubtext: "Premium Nicotine",
+    ...existing,
+    ...settings,
+    klaviyoPublicKey: (settings && settings.klaviyoPublicKey !== void 0 ? settings.klaviyoPublicKey : existing?.klaviyoPublicKey) || "",
+    cloudinaryCloudName: (settings && settings.cloudinaryCloudName !== void 0 ? settings.cloudinaryCloudName : existing?.cloudinaryCloudName) || "",
+    cloudinaryApiKey: (settings && settings.cloudinaryApiKey !== void 0 ? settings.cloudinaryApiKey : existing?.cloudinaryApiKey) || "",
+    cloudinaryApiSecret: (settings && settings.cloudinaryApiSecret !== void 0 ? settings.cloudinaryApiSecret : existing?.cloudinaryApiSecret) || "",
+    id: "layout_settings"
+  };
   try {
     const filePath = path.join(process.cwd(), "layout_settings.json");
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf-8");
@@ -1943,49 +1988,13 @@ async function createExpressApp() {
         base64String = base64String.split(";base64,").pop() || base64String;
       }
       base64String = (base64String || "").trim();
-function parseCloudinaryCredentials(rawCloudName, rawApiKey, rawApiSecret) {
-  let cloudName = (rawCloudName || "").trim();
-  let apiKey = (rawApiKey || "").trim();
-  let apiSecret = (rawApiSecret || "").trim();
-
-  const combined = `${cloudName} ${apiKey} ${apiSecret}`;
-  const urlMatch = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
-  if (urlMatch) {
-    apiKey = apiKey || urlMatch[1].trim();
-    apiSecret = apiSecret || urlMatch[2].trim();
-    cloudName = urlMatch[3].trim();
-  } else {
-    if (cloudName.startsWith("CLOUDINARY_URL=")) {
-      cloudName = cloudName.replace("CLOUDINARY_URL=", "").trim();
-    }
-    if (cloudName.includes("@")) {
-      const parts = cloudName.split("@");
-      cloudName = parts[1].trim();
-      const left = parts[0].replace(/.*cloudinary:\/\//i, "").trim();
-      const keySecret = left.split(":");
-      if (keySecret.length === 2) {
-        apiKey = apiKey || keySecret[0].trim();
-        apiSecret = apiSecret || keySecret[1].trim();
-      }
-    }
-  }
-
-  if (cloudName.toLowerCase() === "pouch" || cloudName.toLowerCase() === "pouch supply") {
-    cloudName = "";
-  }
-
-  return { cloudName, apiKey, apiSecret };
-}
-
       let cloudinaryUrl = null;
       try {
         const layoutSettings = await fetchLayoutSettings();
         const rawCloud = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
         const rawKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
         const rawSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
-
         const { cloudName, apiKey, apiSecret } = parseCloudinaryCredentials(rawCloud, rawKey, rawSecret);
-
         if (cloudName && apiKey && apiSecret) {
           console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
           cloudinary.config({
@@ -2089,9 +2098,7 @@ function parseCloudinaryCredentials(rawCloudName, rawApiKey, rawApiSecret) {
       const rawCloud = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
       const rawKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
       const rawSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
-
       const { cloudName, apiKey, apiSecret } = parseCloudinaryCredentials(rawCloud, rawKey, rawSecret);
-
       if (!cloudName || !apiKey || !apiSecret) {
         return res.status(400).json({
           success: false,
