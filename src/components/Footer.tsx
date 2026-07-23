@@ -165,6 +165,7 @@ export default function Footer({ onNavigate, layoutSettings }: FooterProps) {
             <li onClick={() => onNavigate?.('about')} className="hover:text-white transition-colors cursor-pointer">About</li>
             <li onClick={() => onNavigate?.('contact')} className="hover:text-white transition-colors cursor-pointer">Contact</li>
             <li onClick={() => onNavigate?.('blogs')} className="hover:text-white transition-colors cursor-pointer">Journal</li>
+            <li onClick={() => onNavigate?.('subscription-faqs')} className="hover:text-white transition-colors cursor-pointer">Subscription Faqs</li>
           </ul>
         </div>
 
