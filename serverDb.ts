@@ -218,7 +218,14 @@ export async function fetchResource(resource: string): Promise<any[]> {
     const conn = await connectMongoose();
     const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
-      const docs = await Model.find({}).lean().exec();
+      await seedIfEmpty();
+      let docs = await Model.find({}).lean().exec();
+      
+      // If collection is still empty after fetch, return memoryCache fallback if populated
+      if ((!docs || docs.length === 0) && memoryCache[normResource] && memoryCache[normResource].length > 0) {
+        return memoryCache[normResource];
+      }
+
       // Remove Mongoose/Mongo specific identifiers to map clean object models for the front-end
       return docs.map((doc: any) => {
         const { _id, __v, ...cleanDoc } = doc;
@@ -236,6 +243,18 @@ export async function fetchResource(resource: string): Promise<any[]> {
 
 export async function saveResource(resource: string, list: any[]): Promise<any[]> {
   const normResource = normalizeResourceName(resource);
+  
+  // Guard against accidental empty payload overwrites for essential collections
+  if (!Array.isArray(list)) {
+    console.warn(`[saveResource] Invalid payload received for "${normResource}". Expected array.`);
+    return memoryCache[normResource] || [];
+  }
+
+  if (list.length === 0 && (normResource === 'customPages' || normResource === 'custompages')) {
+    console.warn(`[saveResource] Refusing to overwrite "${normResource}" with empty array to protect page builder data.`);
+    return memoryCache[normResource] || [];
+  }
+
   // Synchronously update local fallback cache
   memoryCache[normResource] = [...list];
   if (normResource !== resource) {

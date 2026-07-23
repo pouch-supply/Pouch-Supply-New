@@ -354,8 +354,17 @@ export default function App() {
           setDiscounts(discsRes);
           loadedDiscountsSuccess.current = true;
         }
-        if (Array.isArray(pagesRes)) {
-          setCustomPages(pagesRes);
+        if (Array.isArray(pagesRes) && pagesRes.length > 0) {
+          let finalPages = [...pagesRes];
+          if (!finalPages.some((p: any) => p && p.isHomepage)) {
+            const defaultHome = DEFAULT_PAGES.find((p: any) => p.isHomepage);
+            if (defaultHome) finalPages = [defaultHome, ...finalPages];
+          }
+          if (!finalPages.some((p: any) => p && p.slug === 'subscribe')) {
+            const defaultSub = DEFAULT_PAGES.find((p: any) => p.slug === 'subscribe');
+            if (defaultSub) finalPages = [...finalPages, defaultSub];
+          }
+          setCustomPages(finalPages);
           loadedPagesSuccess.current = true;
         }
         if (Array.isArray(blogsRes)) {
@@ -918,7 +927,7 @@ export default function App() {
         productId: `sub-pack-${Date.now()}`,
         productTitle: desc,
         price: flatPrice,
-        image: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80',
+        image: PLACEHOLDER_IMAGE,
         quantity: 1,
         vendor: 'Subscription Pack'
       }
@@ -1646,7 +1655,7 @@ export default function App() {
                   {/* Welcome Highlights */}
                   <section className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <img
-                      src="https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=800&q=80"
+                      src={PLACEHOLDER_IMAGE}
                       alt="Canisters"
                       className="rounded-2xl shadow-md border object-cover h-80 w-full"
                       referrerPolicy="no-referrer"

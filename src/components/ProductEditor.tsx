@@ -757,7 +757,7 @@ export default function ProductEditor({
                 <div className="flex gap-2">
                   <input
                     type="url"
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder=""
                     value={newMediaUrl}
                     onChange={(e) => setNewMediaUrl(e.target.value)}
                     className="flex-1 text-xs font-semibold px-3 py-2 border rounded-xl bg-white focus:outline-none"

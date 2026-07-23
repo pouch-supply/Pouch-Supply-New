@@ -2274,6 +2274,7 @@ export default function AdminDashboard({
       return page;
     });
     setLocalPages(updated);
+    onUpdateCustomPages(updated);
     setHasUnsavedChanges(true);
     setSelectedBuilderSectionId(newSection.id);
   };
@@ -2290,6 +2291,7 @@ export default function AdminDashboard({
       return page;
     });
     setLocalPages(updated);
+    onUpdateCustomPages(updated);
     setHasUnsavedChanges(true);
     if (selectedBuilderSectionId === sectionId) {
       setSelectedBuilderSectionId(null);
@@ -2319,6 +2321,7 @@ export default function AdminDashboard({
       return page;
     });
     setLocalPages(updated);
+    onUpdateCustomPages(updated);
     setHasUnsavedChanges(true);
   };
 
@@ -2338,6 +2341,7 @@ export default function AdminDashboard({
       return p;
     });
     setLocalPages(updated);
+    onUpdateCustomPages(updated);
     setHasUnsavedChanges(true);
     if (onDirtyChange) onDirtyChange(true);
   };
@@ -2363,6 +2367,7 @@ export default function AdminDashboard({
       return p;
     });
     setLocalPages(updated);
+    onUpdateCustomPages(updated);
     setHasUnsavedChanges(true);
   };
 
@@ -2384,6 +2389,7 @@ export default function AdminDashboard({
       return p;
     });
     setLocalPages(updated);
+    onUpdateCustomPages(updated);
     setHasUnsavedChanges(true);
     if (onDirtyChange) onDirtyChange(true);
   };
@@ -5175,7 +5181,7 @@ export default function AdminDashboard({
                                     <p className="text-[9.5px] text-slate-450 max-w-md mx-auto leading-snug">{sec.settings.description}</p>
                                     <div className="grid grid-cols-3 gap-2 pt-2">
                                       {[
-                                        { label: 'Global Testing', badge: 'LAB VERIFIED', img: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=200&q=80' },
+                                        { label: 'Global Testing', badge: 'LAB VERIFIED', img: PLACEHOLDER_IMAGE },
                                         { label: 'Aroma Boost', badge: '100% FREE', img: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=200&q=80' },
                                         { label: 'Vacuum Sealed', badge: 'FRESH LOCK', img: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=200&q=80' }
                                       ].map((col, cIdx) => (
@@ -5433,7 +5439,7 @@ export default function AdminDashboard({
                                     </h4>
                                     <div className="grid grid-cols-4 gap-2">
                                       {[
-                                        'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=200&q=80',
+                                        PLACEHOLDER_IMAGE,
                                         'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?auto=format&fit=crop&w=200&q=80',
                                         'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=200&q=80',
                                         'https://images.unsplash.com/photo-1596547609652-9cf5d8d76921?auto=format&fit=crop&w=200&q=80'
@@ -5574,7 +5580,7 @@ export default function AdminDashboard({
                                       gridTemplateColumns: `repeat(${sec.settings.columnsDesktop || 3}, minmax(0, 1fr))`
                                     }}>
                                       {(blogs && blogs.length > 0 ? blogs.slice(0, sec.settings.columnsDesktop || 3) : [
-                                        { id: '1', title: 'Swedish Pouch Manufacturing Regulations', category: 'Standards', date: 'June 19, 2026', image: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=200&q=80' },
+                                        { id: '1', title: 'Swedish Pouch Manufacturing Regulations', category: 'Standards', date: 'June 19, 2026', image: PLACEHOLDER_IMAGE },
                                         { id: '2', title: 'Why Sterile Medical Fiber is Better', category: 'Science', date: 'June 18, 2026', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=200&q=80' },
                                         { id: '3', title: 'Understanding Nicotine Salt Deliveries', category: 'Formulas', date: 'June 17, 2026', image: 'https://images.unsplash.com/photo-1576186726115-4d51596775d1?auto=format&fit=crop&w=200&q=80' }
                                       ].slice(0, sec.settings.columnsDesktop || 3)).map((item, bidx) => (
@@ -6113,7 +6119,7 @@ export default function AdminDashboard({
                                   const newSlide = {
                                     title: 'Precision-Engineered Purity',
                                     description: 'Direct laboratory dispatch. Clinically tested 100% tobacco-free.',
-                                    imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80',
+                                    imageUrl: PLACEHOLDER_IMAGE,
                                     buttonText: 'Purchase Packs',
                                     buttonLink: 'frontend-shop'
                                   };
@@ -6541,7 +6547,7 @@ export default function AdminDashboard({
                                 type="button"
                                 onClick={() => {
                                   const list = currentlyEditingSection.settings.brandItems || [];
-                                  const updated = [...list, { imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80', linkUrl: 'frontend-shop', title: 'New Brand' }];
+                                  const updated = [...list, { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'New Brand' }];
                                   handleUpdateSectionSettings('brandItems', updated);
                                 }}
                                 className="text-[9px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 p-1 px-2 rounded-md font-bold transition-all cursor-pointer uppercase tracking-wider"
@@ -6625,7 +6631,7 @@ export default function AdminDashboard({
                                 type="button"
                                 onClick={() => {
                                   const list = currentlyEditingSection.settings.stepItems || [];
-                                  const updated = [...list, { number: String(list.length + 1), title: 'New Step', description: 'Enter step details here', imageUrl: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=400&q=80' }];
+                                  const updated = [...list, { number: String(list.length + 1), title: 'New Step', description: 'Enter step details here', imageUrl: PLACEHOLDER_IMAGE }];
                                   handleUpdateSectionSettings('stepItems', updated);
                                 }}
                                 className="text-[9px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 p-1 px-2 rounded-md font-bold transition-all cursor-pointer uppercase tracking-wider"
