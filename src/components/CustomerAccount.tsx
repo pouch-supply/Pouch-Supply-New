@@ -523,24 +523,6 @@ export default function CustomerAccount({
                 {authMode === 'login' ? 'Sign In To Account' : 'Register Now'}
               </button>
             </form>
-
-            <div className="pt-6 border-t border-slate-100 text-center">
-              <p className="text-xs text-slate-400 mb-2 font-medium">Quick sign-in suggestions:</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {customers.slice(0, 3).map((cust) => (
-                  <button
-                    key={cust.id}
-                    onClick={() => {
-                      setEmailInput(cust.email);
-                      setPasswordInput('password123');
-                    }}
-                    className="text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-250 py-1 px-3 rounded-full transition-all cursor-pointer"
-                  >
-                    {cust.name}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Quick Tracking Panel */}

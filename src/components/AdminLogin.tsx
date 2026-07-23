@@ -124,25 +124,6 @@ export default function AdminLogin({ onLoginSuccess, onCancel }: AdminLoginProps
             </button>
           </form>
 
-          {/* Sandbox Credentials Guide Banner */}
-          <div className="mt-8 p-4 bg-slate-50 border border-slate-150 rounded-xl">
-            <span className="text-[9px] font-black uppercase text-[#008060] bg-[#e3f5e9] px-2 py-0.5 rounded-full border border-[#c8ebd3]">
-              Sandbox Credentials
-            </span>
-            <div className="mt-2.5 text-xs text-slate-600 space-y-1">
-              <p className="font-medium">For testing & review, log in with:</p>
-              <div className="bg-white border border-slate-200 p-2 rounded-lg mt-1 font-mono text-xs flex justify-between items-center text-slate-700">
-                <div>
-                  <span className="text-slate-400">User:</span> <strong className="text-slate-800">admin</strong>
-                </div>
-                <div className="h-3 w-px bg-slate-200" />
-                <div>
-                  <span className="text-slate-400">Pass:</span> <strong className="text-slate-800">admin</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Cancel button to go back */}
           <div className="mt-6 pt-5 border-t border-slate-150 text-center">
             <button

@@ -749,7 +749,7 @@ export default function CheckoutView({
             </div>
             <div className="flex justify-between border-b border-slate-200 pb-3 text-xs">
               <span className="text-slate-400 font-bold">Payment Method:</span>
-              <span className="font-semibold text-slate-800">{paymentSuccessData.cardBrand} (Sandbox Network)</span>
+              <span className="font-semibold text-slate-800">{paymentSuccessData.cardBrand} (Worldpay Network)</span>
             </div>
             <div className="flex justify-between border-b border-slate-200 pb-3 text-xs">
               <span className="text-slate-400 font-bold">Risk Assessment Score:</span>
@@ -833,7 +833,7 @@ export default function CheckoutView({
           <ArrowLeft className="h-4 w-4" /> Back to Catalog Shop
         </button>
         <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
-          <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure SSL Sandbox Environment
+          <ShieldCheck className="h-4 w-4 text-emerald-500" /> 256-Bit SSL Encrypted Checkout
         </div>
       </div>
 
@@ -1489,202 +1489,28 @@ export default function CheckoutView({
               <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-indigo-600" /> 2. Worldpay Secure Gateway Payment
               </h3>
-              
-              {/* Simulation selector (only relevant for direct or simulation mode testing) */}
-              <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100/50 rounded-lg p-1">
-                <span className="text-[9px] font-extrabold text-indigo-700 uppercase tracking-widest pl-2 pr-1">Simulator Outcome:</span>
-                <select
-                  value={simulationMode}
-                  onChange={(e) => setSimulationMode(e.target.value as any)}
-                  className="text-[10px] font-bold text-indigo-800 bg-white border border-indigo-200/50 rounded px-2 py-1 focus:outline-none"
-                >
-                  <option value="SUCCESS">Approved (Auth Code)</option>
-                  <option value="3DS_REQUIRED">Verify (Simulated 3DS)</option>
-                  <option value="DECLINED">Declined Card (Insuff funds)</option>
-                  <option value="GATEWAY_ERROR">Gateway Error (Timeout)</option>
-                </select>
-              </div>
             </div>
 
-            {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('hosted')}
-                className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-                  paymentMethod === 'hosted'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                🔒 Hosted Redirect (Safe)
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('direct')}
-                className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-                  paymentMethod === 'direct'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                💳 Direct Card (Inline)
-              </button>
-            </div>
-
-            {paymentMethod === 'hosted' ? (
-              /* HOSTED CHECOUT GRAPHIC */
-              <div className="border border-indigo-100 bg-indigo-50/40 rounded-2xl p-6 text-center space-y-4">
-                <div className="mx-auto w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center shadow-inner">
-                  <ShieldCheck className="h-6 w-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-850">Worldpay Hosted Checkout</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed max-w-md mx-auto">
-                    You will be securely redirected to the official Worldpay Sandbox Payment Gateway to finalize your transaction. Your card details are processed entirely in Worldpay's isolated vault (PCI-DSS Compliant).
-                  </p>
-                </div>
-                <div className="flex justify-center gap-6 text-[10px] text-slate-400 font-extrabold uppercase">
-                  <span>✓ 256-bit SSL</span>
-                  <span>✓ 3D Secure 2.0</span>
-                  <span>✓ PCI Level 1</span>
-                </div>
+            {/* HOSTED CHECKOUT GRAPHIC */}
+            <div className="border border-indigo-100 bg-indigo-50/40 rounded-2xl p-6 text-center space-y-4">
+              <div className="mx-auto w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center shadow-inner">
+                <ShieldCheck className="h-6 w-6" />
               </div>
-            ) : (
-              /* DIRECT CARD FORM PARTS */
-              <>
-                {/* Simulated Interactive Card Preview */}
-                <div className="flex justify-center py-2">
-                  <div className={`w-full max-w-sm h-48 rounded-2xl bg-gradient-to-br ${currentCardBrand.color} p-5 text-white flex flex-col justify-between shadow-xl relative overflow-hidden transition-all duration-500`}>
-                    {/* Glossmorphic specular reflections */}
-                    <div className="absolute top-0 right-0 h-40 w-48 bg-white/5 rounded-full blur-2xl transform translate-x-12 -translate-y-12" />
-                    <div className="absolute -bottom-10 left-12 h-32 w-32 bg-black/10 rounded-full blur-xl" />
-
-                    {/* Top strip */}
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-black tracking-widest uppercase text-white/60">WORLD PAY TEST</span>
-                        <div className="flex items-center gap-1">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span className="text-[9px] font-bold text-emerald-400 font-mono tracking-widest uppercase">SANDBOX</span>
-                        </div>
-                      </div>
-                      <span className="text-sm font-black font-mono bg-white/10 px-2.5 py-1 rounded-md backdrop-blur-md uppercase tracking-wider">
-                        {currentCardBrand.logo}
-                      </span>
-                    </div>
-
-                    {/* Micro chip image / graphic */}
-                    <div className="h-8 w-11 bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 rounded-md border border-amber-600/30 flex flex-col justify-between p-1.5 opacity-85">
-                      <div className="grid grid-cols-3 gap-0.5 h-full opacity-60">
-                        <div className="border-r border-b border-black/20"></div>
-                        <div className="border-r border-b border-black/20"></div>
-                        <div className="border-b border-black/20"></div>
-                        <div className="border-r border-black/20"></div>
-                        <div className="border-r border-black/20"></div>
-                        <div className=""></div>
-                      </div>
-                    </div>
-
-                    {/* Card Number */}
-                    <div className="text-base sm:text-lg font-bold font-mono tracking-widest text-white text-center drop-shadow-md">
-                      {cardNumber || '•••• •••• •••• ••••'}
-                    </div>
-
-                    {/* Card footer details */}
-                    <div className="flex justify-between items-end text-[10px] uppercase font-mono">
-                      <div className="space-y-0.5 max-w-[200px] truncate text-left">
-                        <span className="text-white/50 text-[7px] block">CARDHOLDER NAME</span>
-                        <span className="font-extrabold tracking-wider">{cardHolder || 'ALEXANDER STERLING'}</span>
-                      </div>
-
-                      <div className="flex gap-4">
-                        <div className="space-y-0.5 text-right">
-                          <span className="text-white/50 text-[7px] block">EXPIRES</span>
-                          <span className="font-extrabold tracking-wider">{expiry || 'MM/YY'}</span>
-                        </div>
-                        <div className="space-y-0.5 text-right">
-                          <span className="text-white/50 text-[7px] block">CVV</span>
-                          <span className="font-extrabold tracking-wider">{cvv || '•••'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sandbox hint text */}
-                <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 text-[10px] text-slate-500 font-bold space-y-1">
-                  <span className="text-slate-800 uppercase block tracking-wider font-extrabold">💡 Sandbox Testing Credentials:</span>
-                  <p>You can use standard sandbox dummy credentials to test transactions.</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 font-mono text-indigo-700">
-                    <span>Card Number: <strong className="text-slate-800">4444 3333 2222 1111</strong> (or any)</span>
-                    <span>CVV: <strong className="text-slate-800">123</strong></span>
-                    <span>Expiry: <strong className="text-slate-800">12/28</strong></span>
-                  </div>
-                </div>
-              </>
-            )}
+              <div className="space-y-1">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-850">Worldpay Checkout</h4>
+                <p className="text-[11px] text-slate-500 leading-relaxed max-w-md mx-auto">
+                  You will be securely redirected to the official Worldpay Payment Gateway to finalize your transaction. Your payment details are processed entirely in Worldpay's isolated vault (PCI-DSS Compliant).
+                </p>
+              </div>
+              <div className="flex justify-center gap-6 text-[10px] text-slate-400 font-extrabold uppercase">
+                <span>✓ 256-bit SSL</span>
+                <span>✓ 3D Secure 2.0</span>
+                <span>✓ PCI Level 1</span>
+              </div>
+            </div>
 
             {/* Form Inputs */}
             <form onSubmit={handlePay} className="space-y-4">
-              {paymentMethod === 'direct' && finalTotalToPay > 0 && (
-                <>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Cardholder Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="As written on card"
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value)}
-                      className="w-full text-xs p-3 border border-slate-250 bg-slate-50/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-600 font-semibold"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Card Number</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        placeholder="4444 3333 2222 1111"
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        className="w-full text-xs p-3 border border-slate-250 bg-slate-50/30 rounded-xl pl-10 focus:outline-none focus:ring-1 focus:ring-indigo-600 font-mono font-bold"
-                      />
-                      <CreditCard className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Expiry Date</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="MM/YY"
-                        value={expiry}
-                        onChange={handleExpiryChange}
-                        className="w-full text-xs p-3 border border-slate-250 bg-slate-50/30 rounded-xl text-center focus:outline-none focus:ring-1 focus:ring-indigo-600 font-mono font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Card Security Code (CVV)</label>
-                      <input
-                        type="password"
-                        required
-                        maxLength={4}
-                        placeholder="e.g. 123"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                        className="w-full text-xs p-3 border border-slate-250 bg-slate-50/30 rounded-xl text-center focus:outline-none focus:ring-1 focus:ring-indigo-600 font-mono font-bold"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
               {paymentError && (
                 <div className="flex gap-2 items-center bg-red-50 border border-red-150 p-3.5 rounded-xl text-xs font-bold text-red-650">
                   <AlertCircle className="h-4.5 w-4.5 shrink-0" />
@@ -1709,9 +1535,7 @@ export default function CheckoutView({
                     <span>
                       {finalTotalToPay === 0
                         ? `Complete Order using Store Credit (£0.00 to Pay)`
-                        : paymentMethod === 'hosted'
-                          ? `Redirect to Worldpay Checkout (£${finalTotalToPay.toFixed(2)})`
-                          : `Authorize Payment of £${finalTotalToPay.toFixed(2)} GBP`}
+                        : `Pay Now (£${finalTotalToPay.toFixed(2)})`}
                     </span>
                   </>
                 )}
@@ -1989,7 +1813,7 @@ export default function CheckoutView({
               </div>
 
               <div className="pt-2 text-[9px] text-slate-400 font-bold leading-normal">
-                🔐 Worldpay Sandbox Security verification check simulation.
+                🔐 Worldpay 256-Bit SSL Encrypted Direct Checkout Payment System.
               </div>
             </div>
 

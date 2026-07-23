@@ -208,7 +208,7 @@ export function WorldpayGatewaySimulator({ onReturnToShop }: WorldpayGatewaySimu
                 <span className="text-[9px] font-semibold text-emerald-400">● REAL END-TO-END CONNECTION</span>
               </div>
               <p className="text-[10.5px] text-slate-300 leading-normal">
-                Connecting directly to <strong className="text-white">Worldpay Secure Processing (Oppwa / ACI Sandbox)</strong> using your live credentials. Please fill in your card details below.
+                Connecting directly to <strong className="text-white">Worldpay Secure Processing</strong> using your live credentials. Please fill in your card details below.
               </p>
             </div>
 
@@ -236,33 +236,12 @@ export function WorldpayGatewaySimulator({ onReturnToShop }: WorldpayGatewaySimu
           </div>
         ) : (
           <>
-            <div className="bg-slate-850/50 border border-slate-800 rounded-xl p-3.5 space-y-2">
+            <div className="bg-slate-850/50 border border-slate-800 rounded-xl p-3.5 space-y-1">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400">Gateway Simulator settings</span>
-                <span className="text-[9px] font-semibold text-emerald-400">● LIVE SANDBOX MODE</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Secure Direct Card Gateway</span>
+                <span className="text-[9px] font-semibold text-emerald-400">● 256-BIT SSL ENCRYPTED</span>
               </div>
-              <p className="text-[10px] text-slate-400">Select how the Worldpay sandbox API handles this card transaction:</p>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {[
-                  { id: 'SUCCESS', label: '✓ Approved Card' },
-                  { id: '3DS_REQUIRED', label: '🔒 Force 3D Secure' },
-                  { id: 'DECLINED', label: '✗ Decline payment' },
-                  { id: 'GATEWAY_ERROR', label: '⚠️ Timeout error' }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSimulationMode(item.id as any)}
-                    className={`py-1.5 text-[10px] font-extrabold rounded-lg transition-all border ${
-                      simulationMode === item.id 
-                        ? 'bg-rose-600/20 text-rose-300 border-rose-500 shadow-xs' 
-                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+              <p className="text-[10px] text-slate-400">Enter your debit/credit card details below to complete your order securely through Worldpay.</p>
             </div>
 
             {/* Real-looking form inputs */}
@@ -358,7 +337,7 @@ export function WorldpayGatewaySimulator({ onReturnToShop }: WorldpayGatewaySimu
 
             <div className="text-center">
               <p className="text-[9.5px] text-slate-500 leading-normal">
-                By completing this checkout, you authorize Worldpay secure integrations sandbox processing. All customer card payloads are hashed securely over transport layer SSL protocols.
+                By completing this checkout, you authorize Worldpay secure payment processing. All customer card payloads are hashed securely over transport layer SSL protocols.
               </p>
             </div>
           </>

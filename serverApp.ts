@@ -113,11 +113,13 @@ export async function createExpressApp() {
         try {
           fs.writeFileSync(filePath, Buffer.from(imgDoc.base64Data, "base64"));
           console.log(`[Uploads Restore] Restored successfully: ${filename}`);
+          return res.sendFile(filePath);
         } catch (e) {
           console.warn(`[Uploads Restore] Could not write to disk, serving directly:`, e);
         }
-        res.setHeader("Content-Type", imgDoc.mimeType || "image/png");
+        res.setHeader("Content-Type", imgDoc.mimeType || "video/mp4");
         res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.setHeader("Accept-Ranges", "bytes");
         return res.send(Buffer.from(imgDoc.base64Data, "base64"));
       }
     } catch (err) {

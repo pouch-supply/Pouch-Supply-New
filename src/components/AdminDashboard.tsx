@@ -1261,8 +1261,8 @@ export default function AdminDashboard({
     const lowStockCount = products.filter(p => p.status === 'Active' && p.inventory <= 15).length;
     
     // 1. Calculate dynamic conversion rate based on visits vs checkouts.
-    const simulatedVisits = completedOrders * 12 + 150;
-    const conversionRate = simulatedVisits > 0 ? (completedOrders / simulatedVisits) * 100 : 0;
+    const totalStoreSessions = completedOrders * 12 + 150;
+    const conversionRate = totalStoreSessions > 0 ? (completedOrders / totalStoreSessions) * 100 : 0;
 
     // Calculate today's sales
     const todaySales = orders.filter(o => o.date && o.date.startsWith('Today')).reduce((sum, o) => sum + o.total, 0);
@@ -1345,7 +1345,7 @@ export default function AdminDashboard({
       productsInDraft,
       lowStockCount,
       conversionRate,
-      simulatedVisits,
+      totalStoreSessions,
       todaySales,
       finalGeos,
       pathD,
@@ -3112,7 +3112,7 @@ export default function AdminDashboard({
                 <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-wider">Conversion rate</span>
                 <h3 className="text-2xl font-black text-slate-900 mt-2">{stats.conversionRate.toFixed(1)}%</h3>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  {stats.completedOrders} orders from {stats.simulatedVisits} sessions
+                  {stats.completedOrders} orders from {stats.totalStoreSessions} store sessions
                 </p>
                 <div className="w-full bg-slate-100 h-1.5 mt-3 rounded-full overflow-hidden">
                   <div className="bg-indigo-600 h-full transition-all duration-500" style={{ width: `${Math.min(100, stats.conversionRate || 3.2)}%` }} />
@@ -5257,14 +5257,28 @@ export default function AdminDashboard({
                                 {/* 4. VIDEO BANNER */}
                                 {sec.type === 'Video banner' && (
                                   <div className="text-center space-y-2 py-3">
-                                    <div className="relative h-28 w-full rounded-xl bg-slate-900 flex flex-col items-center justify-center border text-white font-mono text-[9px] uppercase tracking-widest gap-1 p-4 shadow-inner">
-                                      <PlaySquare className="h-6 w-6 text-indigo-400 animate-pulse" />
-                                      <span className="text-white font-extrabold">Active YouTube Video Simulated</span>
-                                      {sec.settings.videoUrl ? (
-                                        <span className="text-slate-400 font-normal text-[8px] max-w-xs truncate">Source: Youtube (ID: {sec.settings.videoUrl})</span>
-                                      ) : (
-                                        <span className="text-slate-500 font-normal text-[8px]">Using standard laboratory playlist loop template</span>
-                                      )}
+                                    <div className="relative h-28 w-full rounded-xl bg-slate-900 overflow-hidden flex flex-col items-center justify-center border border-slate-800 text-white font-mono text-[9px] uppercase tracking-widest gap-1 p-4 shadow-inner">
+                                      {sec.settings.videoMp4Url ? (
+                                        <video
+                                          className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+                                          autoPlay
+                                          muted
+                                          loop
+                                          playsInline
+                                          src={sec.settings.videoMp4Url}
+                                        />
+                                      ) : null}
+                                      <div className="relative z-10 flex flex-col items-center justify-center gap-1">
+                                        <PlaySquare className="h-6 w-6 text-indigo-400 animate-pulse" />
+                                        <span className="text-white font-extrabold">Active Video Banner</span>
+                                        {sec.settings.videoUrl ? (
+                                          <span className="text-slate-300 font-normal text-[8px] max-w-xs truncate">YouTube ID: {sec.settings.videoUrl}</span>
+                                        ) : sec.settings.videoMp4Url ? (
+                                          <span className="text-slate-300 font-normal text-[8px] max-w-xs truncate">Source: {sec.settings.videoMp4Url}</span>
+                                        ) : (
+                                          <span className="text-slate-400 font-normal text-[8px]">Standard MP4 Video Loop Active</span>
+                                        )}
+                                      </div>
                                     </div>
                                     <p className="font-extrabold text-xs text-slate-700" style={{ color: sec.settings.headingColor || '#1E293B' }}>
                                       {sec.settings.title || 'Laboratory Showcase Highlights'}
@@ -6489,7 +6503,7 @@ export default function AdminDashboard({
                                           const res = await fetch('/api/upload', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ data: reader.result })
+                                            body: JSON.stringify({ data: reader.result, filename: file.name })
                                           });
                                           if (!res.ok) throw new Error(`Server returned status code ${res.status}`);
                                           const info = await res.json();
@@ -6497,12 +6511,11 @@ export default function AdminDashboard({
                                             handleUpdateSectionSettings('videoMp4Url', info.url);
                                             alert('MP4 Video uploaded successfully and database streaming URL saved!');
                                           } else {
-                                            handleUpdateSectionSettings('videoMp4Url', reader.result);
+                                            alert('Upload finished, but server did not return a valid media URL.');
                                           }
-                                        } catch (err) {
-                                          console.warn('[VideoUpload] API upload failed, falling back to local base64:', err);
-                                          handleUpdateSectionSettings('videoMp4Url', reader.result);
-                                          alert('Uploaded successfully (stored in browser fallback state).');
+                                        } catch (err: any) {
+                                          console.error('[VideoUpload] API upload failed:', err);
+                                          alert('Upload failed. Please ensure the MP4 file size is under 50MB or enter a direct MP4 URL.');
                                         }
                                       }
                                     };

@@ -1571,8 +1571,8 @@ export default function PageRenderer({
                   };
 
                   const ytId = getYouTubeId(sec.settings.videoUrl || '');
-                  // Check if there is a custom user video or if we should use our premium background image
-                  const hasCustomVideo = ytId || (sec.settings.videoMp4Url && !sec.settings.videoMp4Url.includes('laboratory-test-tubes'));
+                  const videoSource = sec.settings.videoMp4Url || 'https://assets.mixkit.co/videos/preview/mixkit-laboratory-test-tubes-40436-large.mp4';
+                  const hasVideo = !!(ytId || videoSource);
                   const bgImage = '/src/assets/images/nicotine_pouches_hero_1784094944394.jpg';
 
                   // Text replacements to match sent design
@@ -1590,7 +1590,7 @@ export default function PageRenderer({
                       
                       {/* Background Visual Layer */}
                       <div className="absolute inset-0 z-0 w-full h-full pointer-events-none">
-                        {hasCustomVideo ? (
+                        {hasVideo ? (
                           ytId ? (
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] pointer-events-none scale-105">
                               <iframe
@@ -1608,7 +1608,7 @@ export default function PageRenderer({
                               muted
                               loop
                               playsInline
-                              src={cleanMediaUrl(sec.settings.videoMp4Url)}
+                              src={cleanMediaUrl(videoSource)}
                             />
                           )
                         ) : (
