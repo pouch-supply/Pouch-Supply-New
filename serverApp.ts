@@ -119,15 +119,52 @@ export async function createExpressApp() {
       }
       base64String = (base64String || "").trim();
 
+function parseCloudinaryCredentials(rawCloudName?: string, rawApiKey?: string, rawApiSecret?: string) {
+  let cloudName = (rawCloudName || "").trim();
+  let apiKey = (rawApiKey || "").trim();
+  let apiSecret = (rawApiSecret || "").trim();
+
+  // Combine to check for cloudinary:// or CLOUDINARY_URL format in any field
+  const combined = `${cloudName} ${apiKey} ${apiSecret}`;
+  const urlMatch = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
+  if (urlMatch) {
+    apiKey = apiKey || urlMatch[1].trim();
+    apiSecret = apiSecret || urlMatch[2].trim();
+    cloudName = urlMatch[3].trim();
+  } else {
+    if (cloudName.startsWith("CLOUDINARY_URL=")) {
+      cloudName = cloudName.replace("CLOUDINARY_URL=", "").trim();
+    }
+    if (cloudName.includes("@")) {
+      const parts = cloudName.split("@");
+      cloudName = parts[1].trim();
+      const left = parts[0].replace(/.*cloudinary:\/\//i, "").trim();
+      const keySecret = left.split(":");
+      if (keySecret.length === 2) {
+        apiKey = apiKey || keySecret[0].trim();
+        apiSecret = apiSecret || keySecret[1].trim();
+      }
+    }
+  }
+
+  if (cloudName.toLowerCase() === "pouch" || cloudName.toLowerCase() === "pouch supply") {
+    cloudName = "";
+  }
+
+  return { cloudName, apiKey, apiSecret };
+}
+
       // Optional Cloudinary Upload proxy
       let cloudinaryUrl: string | null = null;
       try {
         const layoutSettings = await fetchLayoutSettings();
-        const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
-        const apiKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
-        const apiSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+        const rawCloud = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+        const rawKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+        const rawSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
 
-        if (cloudName && apiKey && apiSecret && cloudName.toLowerCase() !== 'pouch' && cloudName.toLowerCase() !== 'pouch supply') {
+        const { cloudName, apiKey, apiSecret } = parseCloudinaryCredentials(rawCloud, rawKey, rawSecret);
+
+        if (cloudName && apiKey && apiSecret) {
           console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
           cloudinary.config({
             cloud_name: cloudName,
@@ -248,14 +285,16 @@ export async function createExpressApp() {
   app.post("/api/test-cloudinary", async (req, res) => {
     try {
       const layoutSettings = await fetchLayoutSettings();
-      const cloudName = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
-      const apiKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
-      const apiSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+      const rawCloud = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+      const rawKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+      const rawSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+
+      const { cloudName, apiKey, apiSecret } = parseCloudinaryCredentials(rawCloud, rawKey, rawSecret);
 
       if (!cloudName || !apiKey || !apiSecret) {
         return res.status(400).json({
           success: false,
-          error: "Missing Cloudinary credentials. Please enter Cloud Name, API Key, and API Secret."
+          error: "Missing or invalid Cloudinary credentials. Please enter a valid Cloud Name (or paste your full CLOUDINARY_URL), API Key, and API Secret."
         });
       }
 

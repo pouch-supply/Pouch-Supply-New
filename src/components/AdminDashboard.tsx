@@ -807,17 +807,70 @@ export default function AdminDashboard({
   const [testingCloudinary, setTestingCloudinary] = useState(false);
   const [cloudinaryTestResult, setCloudinaryTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  const parseCloudinaryInput = (cNameVal?: string, aKeyVal?: string, aSecretVal?: string) => {
+    let cName = (cNameVal || '').trim();
+    let aKey = (aKeyVal || '').trim();
+    let aSecret = (aSecretVal || '').trim();
+
+    const combined = `${cName} ${aKey} ${aSecret}`;
+    const match = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
+    if (match) {
+      aKey = match[1].trim();
+      aSecret = match[2].trim();
+      cName = match[3].trim();
+    } else {
+      if (cName.startsWith('CLOUDINARY_URL=')) {
+        cName = cName.replace('CLOUDINARY_URL=', '').trim();
+      }
+      if (cName.includes('@')) {
+        const parts = cName.split('@');
+        cName = parts[1].trim();
+        const left = parts[0].replace(/.*cloudinary:\/\//i, '').trim();
+        const ks = left.split(':');
+        if (ks.length === 2) {
+          aKey = ks[0].trim();
+          aSecret = ks[1].trim();
+        }
+      }
+    }
+
+    if (cName.toLowerCase() === 'pouch' || cName.toLowerCase() === 'pouch supply') {
+      cName = '';
+    }
+
+    return { cName, aKey, aSecret };
+  };
+
   const handleTestCloudinary = async () => {
     setTestingCloudinary(true);
     setCloudinaryTestResult(null);
+
+    const parsed = parseCloudinaryInput(
+      localLayoutSettings.cloudinaryCloudName,
+      localLayoutSettings.cloudinaryApiKey,
+      localLayoutSettings.cloudinaryApiSecret
+    );
+
+    const updatedSettings = {
+      ...localLayoutSettings,
+      cloudinaryCloudName: parsed.cName || localLayoutSettings.cloudinaryCloudName,
+      cloudinaryApiKey: parsed.aKey || localLayoutSettings.cloudinaryApiKey,
+      cloudinaryApiSecret: parsed.aSecret || localLayoutSettings.cloudinaryApiSecret
+    };
+
+    setLocalLayoutSettings(updatedSettings);
+    if (onUpdateLayoutSettings) {
+      onUpdateLayoutSettings(updatedSettings);
+    }
+
     try {
       const res = await fetch('/api/test-cloudinary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cloudName: localLayoutSettings.cloudinaryCloudName,
-          apiKey: localLayoutSettings.cloudinaryApiKey,
-          apiSecret: localLayoutSettings.cloudinaryApiSecret
+          cloudName: updatedSettings.cloudinaryCloudName,
+          apiKey: updatedSettings.cloudinaryApiKey,
+          apiSecret: updatedSettings.cloudinaryApiSecret
         })
       });
       const data = await res.json();
@@ -9080,7 +9133,12 @@ export default function AdminDashboard({
                 <input
                   type="text"
                   value={localLayoutSettings.klaviyoPublicKey || ''}
-                  onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, klaviyoPublicKey: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const updated = { ...localLayoutSettings, klaviyoPublicKey: val };
+                    setLocalLayoutSettings(updated);
+                    if (onUpdateLayoutSettings) onUpdateLayoutSettings(updated);
+                  }}
                   className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   placeholder="e.g. AB12CD"
                 />
@@ -9116,16 +9174,61 @@ export default function AdminDashboard({
                 When configured, any product visuals, brand logo banners, or active section background videos you upload will be permanently hosted on Cloudinary, connected with your MongoDB cluster.
               </p>
 
+              {/* Quick Paste Connection String Box */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                <label className="block text-indigo-700 font-extrabold text-[9.5px] uppercase tracking-wider">
+                  ⚡ Quick Auto-Fill: Paste CLOUDINARY_URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="Paste e.g. CLOUDINARY_URL=cloudinary://123456:abcdef@qfoxl8ia"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.trim()) {
+                      const parsed = parseCloudinaryInput(val, '', '');
+                      if (parsed.cName && parsed.aKey && parsed.aSecret) {
+                        const updated = {
+                          ...localLayoutSettings,
+                          cloudinaryCloudName: parsed.cName,
+                          cloudinaryApiKey: parsed.aKey,
+                          cloudinaryApiSecret: parsed.aSecret
+                        };
+                        setLocalLayoutSettings(updated);
+                        if (onUpdateLayoutSettings) onUpdateLayoutSettings(updated);
+                      }
+                    }
+                  }}
+                  className="w-full text-xs font-mono border border-indigo-200 p-2 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+                <p className="text-[8.5px] text-slate-500">
+                  Pasting your connection string automatically extracts your Cloud Name (<code>qfoxl8ia</code>), API Key, and API Secret instantly.
+                </p>
+              </div>
+
               <div className="space-y-3">
                 <div>
                   <label className="block text-slate-500 font-bold text-[9px] uppercase tracking-wider mb-1">Cloudinary Cloud Name</label>
                   <input
                     type="text"
                     value={localLayoutSettings.cloudinaryCloudName || ''}
-                    onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, cloudinaryCloudName: e.target.value })}
-                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="e.g. pouch-supply"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const parsed = parseCloudinaryInput(val, localLayoutSettings.cloudinaryApiKey, localLayoutSettings.cloudinaryApiSecret);
+                      const updated = {
+                        ...localLayoutSettings,
+                        cloudinaryCloudName: parsed.cName || val,
+                        cloudinaryApiKey: parsed.aKey || localLayoutSettings.cloudinaryApiKey,
+                        cloudinaryApiSecret: parsed.aSecret || localLayoutSettings.cloudinaryApiSecret
+                      };
+                      setLocalLayoutSettings(updated);
+                      if (onUpdateLayoutSettings) onUpdateLayoutSettings(updated);
+                    }}
+                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                    placeholder="e.g. qfoxl8ia"
                   />
+                  <p className="text-[8.5px] text-slate-400 mt-1">
+                    Your unique cloud identifier (e.g. <code>qfoxl8ia</code>).
+                  </p>
                 </div>
 
                 <div>
@@ -9133,8 +9236,13 @@ export default function AdminDashboard({
                   <input
                     type="text"
                     value={localLayoutSettings.cloudinaryApiKey || ''}
-                    onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, cloudinaryApiKey: e.target.value })}
-                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const updated = { ...localLayoutSettings, cloudinaryApiKey: val };
+                      setLocalLayoutSettings(updated);
+                      if (onUpdateLayoutSettings) onUpdateLayoutSettings(updated);
+                    }}
+                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                     placeholder="e.g. 123456789012345"
                   />
                 </div>
@@ -9144,8 +9252,13 @@ export default function AdminDashboard({
                   <input
                     type="password"
                     value={localLayoutSettings.cloudinaryApiSecret || ''}
-                    onChange={(e) => setLocalLayoutSettings({ ...localLayoutSettings, cloudinaryApiSecret: e.target.value })}
-                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const updated = { ...localLayoutSettings, cloudinaryApiSecret: val };
+                      setLocalLayoutSettings(updated);
+                      if (onUpdateLayoutSettings) onUpdateLayoutSettings(updated);
+                    }}
+                    className="w-full text-xs font-semibold border border-slate-200 p-2.5 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                     placeholder="e.g. *********************************"
                   />
                 </div>

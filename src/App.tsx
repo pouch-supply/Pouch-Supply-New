@@ -373,7 +373,29 @@ export default function App() {
         }
         
         if (layoutRes) {
-          setLayoutSettings(layoutRes.data || layoutRes);
+          const resData = layoutRes.data || layoutRes;
+          setLayoutSettings(prev => {
+            const merged = {
+              ...prev,
+              ...resData,
+              klaviyoPublicKey: resData.klaviyoPublicKey || prev.klaviyoPublicKey || '',
+              cloudinaryCloudName: resData.cloudinaryCloudName || prev.cloudinaryCloudName || '',
+              cloudinaryApiKey: resData.cloudinaryApiKey || prev.cloudinaryApiKey || '',
+              cloudinaryApiSecret: resData.cloudinaryApiSecret || prev.cloudinaryApiSecret || '',
+            };
+            localStorage.setItem('ps_layout_settings', JSON.stringify(merged));
+            if (
+              (!resData.klaviyoPublicKey && merged.klaviyoPublicKey) ||
+              (!resData.cloudinaryCloudName && merged.cloudinaryCloudName)
+            ) {
+              fetch('/api/layoutsettings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(merged)
+              }).catch(() => {});
+            }
+            return merged;
+          });
         }
       } catch (err) {
         console.error("[State Loader] Failed to connect to backend MongoDB API. Using local backup state.", err);

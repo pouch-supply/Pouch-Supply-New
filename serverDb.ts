@@ -570,7 +570,22 @@ export async function fetchLayoutSettings(): Promise<any> {
 }
 
 export async function saveLayoutSettings(settings: any): Promise<any> {
-  const payload = { ...settings, id: "layout_settings" };
+  let existing: any = {};
+  try {
+    existing = await fetchLayoutSettings();
+  } catch (e) {}
+
+  const payload = {
+    headerLogoText: 'POUCH SUPPLY',
+    headerLogoSubtext: 'Premium Nicotine',
+    ...existing,
+    ...settings,
+    klaviyoPublicKey: (settings && settings.klaviyoPublicKey !== undefined ? settings.klaviyoPublicKey : existing?.klaviyoPublicKey) || '',
+    cloudinaryCloudName: (settings && settings.cloudinaryCloudName !== undefined ? settings.cloudinaryCloudName : existing?.cloudinaryCloudName) || '',
+    cloudinaryApiKey: (settings && settings.cloudinaryApiKey !== undefined ? settings.cloudinaryApiKey : existing?.cloudinaryApiKey) || '',
+    cloudinaryApiSecret: (settings && settings.cloudinaryApiSecret !== undefined ? settings.cloudinaryApiSecret : existing?.cloudinaryApiSecret) || '',
+    id: "layout_settings"
+  };
   
   // Write to local file as fallback/concurrency
   try {

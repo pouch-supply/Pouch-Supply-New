@@ -39,7 +39,7 @@ var DEFAULT_PAGES = [
           description: "Start managing your products, collections, and page sections inside the Admin Dashboard.",
           buttonText: "View Store Catalog",
           buttonLink: "frontend-shop",
-          imageUrl: "https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=1200&q=80"
+          imageUrl: ""
         }
       }
     ]
@@ -563,7 +563,11 @@ async function fetchResource(resource) {
     const conn = await connectMongoose();
     const Model = getModelForResource(normResource);
     if (conn && Model) {
-      const docs = await Model.find({}).lean().exec();
+      await seedIfEmpty();
+      let docs = await Model.find({}).lean().exec();
+      if ((!docs || docs.length === 0) && memoryCache[normResource] && memoryCache[normResource].length > 0) {
+        return memoryCache[normResource];
+      }
       return docs.map((doc) => {
         const { _id, __v, ...cleanDoc } = doc;
         return cleanDoc;
@@ -579,6 +583,14 @@ async function fetchResource(resource) {
 }
 async function saveResource(resource, list) {
   const normResource = normalizeResourceName(resource);
+  if (!Array.isArray(list)) {
+    console.warn(`[saveResource] Invalid payload received for "${normResource}". Expected array.`);
+    return memoryCache[normResource] || [];
+  }
+  if (list.length === 0 && (normResource === "customPages" || normResource === "custompages")) {
+    console.warn(`[saveResource] Refusing to overwrite "${normResource}" with empty array to protect page builder data.`);
+    return memoryCache[normResource] || [];
+  }
   memoryCache[normResource] = [...list];
   if (normResource !== resource) {
     memoryCache[resource] = memoryCache[normResource];
@@ -764,12 +776,12 @@ async function getUploadedImage(id) {
     const conn = await connectMongoose();
     if (conn) {
       const UploadedModel = UploadedImageModel;
-      const escapedBare = bareId.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+      const escapedBare = bareId.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
       const doc = await UploadedModel.findOne({
         $or: [
           { id },
           { id: bareId },
-          { id: { $regex: new RegExp(`^${escapedBare}`, 'i') } }
+          { id: { $regex: new RegExp(`^${escapedBare}`, "i") } }
         ]
       }).lean().exec();
       if (doc) {
@@ -1931,13 +1943,50 @@ async function createExpressApp() {
         base64String = base64String.split(";base64,").pop() || base64String;
       }
       base64String = (base64String || "").trim();
+function parseCloudinaryCredentials(rawCloudName, rawApiKey, rawApiSecret) {
+  let cloudName = (rawCloudName || "").trim();
+  let apiKey = (rawApiKey || "").trim();
+  let apiSecret = (rawApiSecret || "").trim();
+
+  const combined = `${cloudName} ${apiKey} ${apiSecret}`;
+  const urlMatch = combined.match(/cloudinary:\/\/([^:]+):([^@]+)@([a-zA-Z0-9_-]+)/i);
+  if (urlMatch) {
+    apiKey = apiKey || urlMatch[1].trim();
+    apiSecret = apiSecret || urlMatch[2].trim();
+    cloudName = urlMatch[3].trim();
+  } else {
+    if (cloudName.startsWith("CLOUDINARY_URL=")) {
+      cloudName = cloudName.replace("CLOUDINARY_URL=", "").trim();
+    }
+    if (cloudName.includes("@")) {
+      const parts = cloudName.split("@");
+      cloudName = parts[1].trim();
+      const left = parts[0].replace(/.*cloudinary:\/\//i, "").trim();
+      const keySecret = left.split(":");
+      if (keySecret.length === 2) {
+        apiKey = apiKey || keySecret[0].trim();
+        apiSecret = apiSecret || keySecret[1].trim();
+      }
+    }
+  }
+
+  if (cloudName.toLowerCase() === "pouch" || cloudName.toLowerCase() === "pouch supply") {
+    cloudName = "";
+  }
+
+  return { cloudName, apiKey, apiSecret };
+}
+
       let cloudinaryUrl = null;
       try {
         const layoutSettings = await fetchLayoutSettings();
-        const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
-        const apiKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
-        const apiSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
-        if (cloudName && apiKey && apiSecret && cloudName.toLowerCase() !== "pouch" && cloudName.toLowerCase() !== "pouch supply") {
+        const rawCloud = (process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+        const rawKey = (process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+        const rawSecret = (process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+
+        const { cloudName, apiKey, apiSecret } = parseCloudinaryCredentials(rawCloud, rawKey, rawSecret);
+
+        if (cloudName && apiKey && apiSecret) {
           console.log(`[Cloudinary Proxy] Configuring Cloudinary connection for Cloud Name: ${cloudName}...`);
           cloudinary.config({
             cloud_name: cloudName,
@@ -2037,13 +2086,16 @@ async function createExpressApp() {
   app.post("/api/test-cloudinary", async (req, res) => {
     try {
       const layoutSettings = await fetchLayoutSettings();
-      const cloudName = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
-      const apiKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
-      const apiSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+      const rawCloud = (req.body?.cloudName || process.env.CLOUDINARY_CLOUD_NAME || layoutSettings?.cloudinaryCloudName || "").trim();
+      const rawKey = (req.body?.apiKey || process.env.CLOUDINARY_API_KEY || layoutSettings?.cloudinaryApiKey || "").trim();
+      const rawSecret = (req.body?.apiSecret || process.env.CLOUDINARY_API_SECRET || layoutSettings?.cloudinaryApiSecret || "").trim();
+
+      const { cloudName, apiKey, apiSecret } = parseCloudinaryCredentials(rawCloud, rawKey, rawSecret);
+
       if (!cloudName || !apiKey || !apiSecret) {
         return res.status(400).json({
           success: false,
-          error: "Missing Cloudinary credentials. Please enter Cloud Name, API Key, and API Secret."
+          error: "Missing or invalid Cloudinary credentials. Please enter a valid Cloud Name (or paste your full CLOUDINARY_URL), API Key, and API Secret."
         });
       }
       cloudinary.config({
