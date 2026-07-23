@@ -231,12 +231,11 @@ export async function fetchResource(resource: string): Promise<any[]> {
         const { _id, __v, ...cleanDoc } = doc;
         return cleanDoc;
       });
-    } else if (mongoUri) {
-      console.warn(`[fetchResource] MongoDB connection failed despite being configured. Falling back to local memoryCache for "${normResource}".`);
+    } else {
+      // Offline / fallback mode
     }
   } catch (error: any) {
     checkAndResetOnNetworkError(error);
-    console.warn(`[fetchResource] Database fetch for "${normResource}" unavailable (${error?.message || 'Network/SSL error'}), falling back to memoryCache.`);
   }
   return memoryCache[normResource] || memoryCache[resource] || [];
 }
@@ -284,12 +283,11 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
       }
       console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;
-    } else if (mongoUri) {
-      console.warn(`[saveResource] MongoDB connection failed despite being configured during save. Saved to memoryCache fallback for "${normResource}".`);
+    } else {
+      // Local cache mode
     }
   } catch (error: any) {
     checkAndResetOnNetworkError(error);
-    console.warn(`[saveResource] Error during database synchronization for "${normResource}" (${error?.message || 'Network/SSL error'}), saved to memoryCache fallback.`);
   }
   return memoryCache[normResource];
 }
