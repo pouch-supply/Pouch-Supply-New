@@ -265,26 +265,6 @@ export async function fetchResource(resource: string): Promise<any[]> {
         return cleanDoc;
       });
 
-      // Merge with locally cached backup items so user-created items are NEVER lost
-      const cached = memoryCache[normResource] || memoryCache[resource] || [];
-      if (cached.length > 0) {
-        const dbIds = new Set(cleanDocs.map((d: any) => d.id));
-        let mergedCount = 0;
-        for (const item of cached) {
-          if (item && item.id && !dbIds.has(item.id)) {
-            cleanDocs.push(item);
-            dbIds.add(item.id);
-            mergedCount++;
-            // Upsert missing local item into MongoDB background
-            const { _id, __v, ...cleanItem } = item;
-            Model.replaceOne({ id: item.id }, cleanItem, { upsert: true }).catch(() => {});
-          }
-        }
-        if (mergedCount > 0) {
-          console.log(`[fetchResource] Seamlessly merged ${mergedCount} local items into DB response for "${normResource}".`);
-        }
-      }
-
       memoryCache[normResource] = cleanDocs;
       if (normResource !== resource) memoryCache[resource] = cleanDocs;
       persistMemoryCacheToBackup();
@@ -300,14 +280,9 @@ export async function fetchResource(resource: string): Promise<any[]> {
 export async function saveResource(resource: string, list: any[]): Promise<any[]> {
   const normResource = normalizeResourceName(resource);
   
-  // Guard against accidental empty payload overwrites for essential collections
+  // Guard against non-array payloads
   if (!Array.isArray(list)) {
     console.warn(`[saveResource] Invalid payload received for "${normResource}". Expected array.`);
-    return memoryCache[normResource] || [];
-  }
-
-  if (list.length === 0 && (normResource === 'customPages' || normResource === 'custompages')) {
-    console.warn(`[saveResource] Refusing to overwrite "${normResource}" with empty array to protect page builder data.`);
     return memoryCache[normResource] || [];
   }
 
@@ -322,20 +297,31 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
     const conn = await connectMongoose();
     const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
-      const currentIds = list.map(item => item.id).filter(Boolean);
-      console.log(`[saveResource] Syncing ${normResource} collection. Total items in payload: ${list.length}. Active IDs:`, currentIds);
+      const activeIds = list.map(item => item.id).filter(Boolean);
+      const activeSlugs = list.map(item => item.slug).filter(Boolean);
+      const allActiveKeys = Array.from(new Set([...activeIds, ...activeSlugs]));
       
-      // Delete items no longer in client list
-      const deleteResult = await Model.deleteMany({ id: { $nin: currentIds } });
+      console.log(`[saveResource] Syncing ${normResource} collection. Total items in payload: ${list.length}. Active keys:`, allActiveKeys);
+      
+      // Delete items no longer in active list from MongoDB
+      const deleteResult = await Model.deleteMany({
+        $and: [
+          { id: { $nin: allActiveKeys } },
+          { slug: { $nin: allActiveKeys } }
+        ]
+      });
       if (deleteResult.deletedCount > 0) {
         console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${normResource} not in active client list.`);
       }
       
-      // Upsert current items using replaceOne to avoid duplicate or outdated structures
+      // Upsert current items using replaceOne
       for (const item of list) {
-        if (!item.id) continue;
+        if (!item) continue;
+        const key = item.id || item.slug;
+        if (!key) continue;
         const { _id, __v, ...cleanItem } = item;
-        await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
+        cleanItem.id = cleanItem.id || key;
+        await Model.replaceOne({ $or: [{ id: key }, { slug: key }] }, cleanItem, { upsert: true });
       }
       console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;
@@ -408,10 +394,10 @@ export async function deleteSingleItem(resource: string, id: string): Promise<bo
 
   // Update memory cache
   if (memoryCache[normResource]) {
-    memoryCache[normResource] = memoryCache[normResource].filter((i: any) => i.id !== id);
+    memoryCache[normResource] = memoryCache[normResource].filter((i: any) => i.id !== id && i.slug !== id);
   }
   if (normResource !== resource && memoryCache[resource]) {
-    memoryCache[resource] = memoryCache[resource].filter((i: any) => i.id !== id);
+    memoryCache[resource] = memoryCache[resource].filter((i: any) => i.id !== id && i.slug !== id);
   }
   persistMemoryCacheToBackup();
 
@@ -419,7 +405,7 @@ export async function deleteSingleItem(resource: string, id: string): Promise<bo
     const conn = await connectMongoose();
     const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
-      const res = await Model.deleteOne({ id });
+      const res = await Model.deleteOne({ $or: [{ id }, { slug: id }] });
       console.log(`[deleteSingleItem] Deleted item ${id} from "${normResource}" collection. Deleted count: ${res.deletedCount}`);
       return res.deletedCount > 0;
     }

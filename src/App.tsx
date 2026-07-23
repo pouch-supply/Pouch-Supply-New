@@ -245,6 +245,13 @@ export default function App() {
         finalPages = [...finalPages, defaultSub];
       }
     }
+    // Guaranteed presence check for Brands page
+    if (!finalPages.some((p: any) => p && p.slug === 'brands')) {
+      const defaultBrands = DEFAULT_PAGES.find((p: any) => p.slug === 'brands');
+      if (defaultBrands) {
+        finalPages = [...finalPages, defaultBrands];
+      }
+    }
     return finalPages;
   });
 
@@ -319,56 +326,23 @@ export default function App() {
         ]);
 
         if (Array.isArray(prodsRes) && prodsRes.length > 0) {
-          setProducts(prev => {
-            const map = new Map<string, Product>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of prodsRes) { if (item && item.id) map.set(item.id, item); }
-            const merged = Array.from(map.values());
-            if (merged.length > prodsRes.length) {
-              fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(merged) }).catch(() => {});
-            }
-            return merged;
-          });
+          setProducts(prodsRes);
           loadedProductsSuccess.current = true;
         }
         if (Array.isArray(collsRes) && collsRes.length > 0) {
-          setCollections(prev => {
-            const map = new Map<string, Collection>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of collsRes) { if (item && item.id) map.set(item.id, item); }
-            const merged = Array.from(map.values());
-            if (merged.length > collsRes.length) {
-              fetch('/api/collections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(merged) }).catch(() => {});
-            }
-            return merged;
-          });
+          setCollections(collsRes);
           loadedCollectionsSuccess.current = true;
         }
         if (Array.isArray(ordersRes) && ordersRes.length > 0) {
-          setOrders(prev => {
-            const map = new Map<string, Order>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of ordersRes) { if (item && item.id) map.set(item.id, item); }
-            return Array.from(map.values());
-          });
+          setOrders(ordersRes);
           loadedOrdersSuccess.current = true;
         }
         if (Array.isArray(filesRes) && filesRes.length > 0) {
-          setFiles(prev => {
-            const map = new Map<string, FileEntry>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of filesRes) { if (item && item.id) map.set(item.id, item); }
-            return Array.from(map.values());
-          });
+          setFiles(filesRes);
           loadedFilesSuccess.current = true;
         }
         if (Array.isArray(custsRes) && custsRes.length > 0) {
-          setCustomers(prev => {
-            const map = new Map<string, Customer>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of custsRes) { if (item && item.id) map.set(item.id, item); }
-            return Array.from(map.values());
-          });
+          setCustomers(custsRes);
           loadedCustomersSuccess.current = true;
           
           // Sync currently logged-in customer's details immediately on load
@@ -386,53 +360,20 @@ export default function App() {
           }
         }
         if (Array.isArray(discsRes) && discsRes.length > 0) {
-          setDiscounts(prev => {
-            const map = new Map<string, Discount>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of discsRes) { if (item && item.id) map.set(item.id, item); }
-            return Array.from(map.values());
-          });
+          setDiscounts(discsRes);
           loadedDiscountsSuccess.current = true;
         }
         if (Array.isArray(pagesRes) && pagesRes.length > 0) {
-          setCustomPages(prev => {
-            const pageMap = new Map<string, CustomPage>();
-            for (const p of prev) {
-              if (p && (p.id || p.slug)) pageMap.set(p.id || p.slug, p);
-            }
-            for (const p of pagesRes) {
-              if (p && (p.id || p.slug)) {
-                const existing = pageMap.get(p.id || p.slug);
-                pageMap.set(p.id || p.slug, existing ? { ...existing, ...p } : p);
-              }
-            }
-            let merged = Array.from(pageMap.values());
-            if (!merged.some((p: any) => p && p.isHomepage)) {
-              const defaultHome = DEFAULT_PAGES.find((p: any) => p.isHomepage);
-              if (defaultHome) merged = [defaultHome, ...merged];
-            }
-            if (!merged.some((p: any) => p && p.slug === 'subscribe')) {
-              const defaultSub = DEFAULT_PAGES.find((p: any) => p.slug === 'subscribe');
-              if (defaultSub) merged = [...merged, defaultSub];
-            }
-            if (merged.length > pagesRes.length) {
-              fetch('/api/custompages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(merged)
-              }).catch(() => {});
-            }
-            return merged;
-          });
+          let finalPages = pagesRes;
+          if (!finalPages.some((p: any) => p && p.isHomepage)) {
+            const defaultHome = DEFAULT_PAGES.find((p: any) => p.isHomepage);
+            if (defaultHome) finalPages = [defaultHome, ...finalPages];
+          }
+          setCustomPages(finalPages);
           loadedPagesSuccess.current = true;
         }
         if (Array.isArray(blogsRes) && blogsRes.length > 0) {
-          setBlogs(prev => {
-            const map = new Map<string, BlogPost>();
-            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
-            for (const item of blogsRes) { if (item && item.id) map.set(item.id, item); }
-            return Array.from(map.values());
-          });
+          setBlogs(blogsRes);
           loadedBlogsSuccess.current = true;
         }
         
@@ -1963,46 +1904,49 @@ export default function App() {
             {/* FRONTEND VIEW - BRANDS DIRECTORY */}
             {currentTab === 'frontend-brands' && (() => {
               const matchedPage = customPages.find(p => p.slug === 'brands');
-              if (matchedPage) {
-                return (
-                  <PageRenderer 
-                    page={matchedPage} 
-                    allProducts={products}
-                    allCollections={collections}
-                    loggedInCustomer={loggedInCustomer}
-                    onAddToCart={handleAddToCart} 
-                    onToggleWishlist={handleToggleWishlist}
-                    allBlogs={blogs}
-                    onNavigate={(target, arg) => {
-                      if (target === 'frontend-shop' || target === 'frontend-subscribe' || target === 'frontend-brands') {
-                        if (target === 'frontend-shop' && arg) {
-                          navigateToTab('collection-detail', undefined, arg);
+              const hasBrandListSection = matchedPage?.sections?.some(s => s.type === 'Brand list' || s.type === 'Brands we offer');
+              return (
+                <div>
+                  {matchedPage && (
+                    <PageRenderer 
+                      page={matchedPage} 
+                      allProducts={products}
+                      allCollections={collections}
+                      loggedInCustomer={loggedInCustomer}
+                      onAddToCart={handleAddToCart} 
+                      onToggleWishlist={handleToggleWishlist}
+                      allBlogs={blogs}
+                      onNavigate={(target, arg) => {
+                        if (target === 'frontend-shop' || target === 'frontend-subscribe' || target === 'frontend-brands') {
+                          if (target === 'frontend-shop' && arg) {
+                            navigateToTab('collection-detail', undefined, arg);
+                          } else {
+                            navigateToTab(target);
+                          }
+                        } else if (target.startsWith('/pages/') || target.startsWith('page-')) {
+                          const slug = target.replace('/pages/', '').replace('page-', '');
+                          navigateToTab(slug);
+                        } else if (target.startsWith('/collections/') || target.startsWith('collection-')) {
+                          const colId = target.replace('/collections/', '').replace('collection-', '');
+                          navigateToTab('collection-detail', undefined, colId);
+                        } else if (target.startsWith('/products/') || target.startsWith('product-')) {
+                          const prodId = target.replace('/products/', '').replace('product-', '');
+                          navigateToTab('product-detail', prodId);
                         } else {
                           navigateToTab(target);
                         }
-                      } else if (target.startsWith('/pages/') || target.startsWith('page-')) {
-                        const slug = target.replace('/pages/', '').replace('page-', '');
-                        navigateToTab(slug);
-                      } else if (target.startsWith('/collections/') || target.startsWith('collection-')) {
-                        const colId = target.replace('/collections/', '').replace('collection-', '');
+                      }}
+                    />
+                  )}
+                  {!hasBrandListSection && (
+                    <BrandList
+                      collections={collections}
+                      onBrandClick={(colId) => {
                         navigateToTab('collection-detail', undefined, colId);
-                      } else if (target.startsWith('/products/') || target.startsWith('product-')) {
-                        const prodId = target.replace('/products/', '').replace('product-', '');
-                        navigateToTab('product-detail', prodId);
-                      } else {
-                        navigateToTab(target);
-                      }
-                    }}
-                  />
-                );
-              }
-              return (
-                <BrandList
-                  collections={collections}
-                  onBrandClick={(colId) => {
-                    navigateToTab('collection-detail', undefined, colId);
-                  }}
-                />
+                      }}
+                    />
+                  )}
+                </div>
               );
             })()}
 

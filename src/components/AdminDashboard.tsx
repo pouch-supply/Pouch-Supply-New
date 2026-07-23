@@ -4753,9 +4753,13 @@ export default function AdminDashboard({
                             disabled={page.isHomepage}
                             onClick={() => {
                               if (confirm(`Are you sure you want to permanently delete "${page.title}"?`)) {
-                                const updated = localPages.filter(p => p.id !== page.id);
+                                const pageId = page.id || page.slug;
+                                const pageSlug = page.slug || page.id;
+                                const updated = localPages.filter(p => p.id !== page.id && p.slug !== page.slug);
                                 setLocalPages(updated);
                                 onUpdateCustomPages(updated);
+                                if (pageId) fetch(`/api/custompages/${pageId}`, { method: 'DELETE' }).catch(() => {});
+                                if (pageSlug && pageSlug !== pageId) fetch(`/api/custompages/${pageSlug}`, { method: 'DELETE' }).catch(() => {});
                               }
                             }}
                             className={`p-1.5 rounded-md transition-all flex items-center justify-center ${

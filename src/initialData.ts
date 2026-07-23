@@ -52,6 +52,32 @@ export const DEFAULT_PAGES: CustomPage[] = [
           title: 'Official Brands Matrix',
           description: 'Explore our catalog of certified compounding premium brands retrieved directly from our synchronized database.',
         }
+      },
+      {
+        id: 's3',
+        type: 'Brand list',
+        settings: {
+          fullWidth: false,
+          backgroundColor: '#FFFFFF',
+          headingColor: '#0C1017',
+          textColor: '#64748B',
+          title: 'Official Brands Directory',
+          description: 'Explore our catalog of certified compounding premium brands.',
+          brandItems: [
+            { title: '77', linkUrl: '/collections/77', imageUrl: '' },
+            { title: 'Cuba', linkUrl: '/collections/cuba', imageUrl: '' },
+            { title: 'Killa', linkUrl: '/collections/killa', imageUrl: '' },
+            { title: 'Pablo', linkUrl: '/collections/pablo', imageUrl: '' },
+            { title: 'Velo', linkUrl: '/collections/velo', imageUrl: '' },
+            { title: 'White Fox', linkUrl: '/collections/white-fox', imageUrl: '' },
+            { title: 'Zyn', linkUrl: '/collections/zyn', imageUrl: '' },
+            { title: 'XQS', linkUrl: '/collections/xqs', imageUrl: '' },
+            { title: 'Nordic Spirit', linkUrl: '/collections/nordic-spirit', imageUrl: '' },
+            { title: 'Clew', linkUrl: '/collections/clew', imageUrl: '' },
+            { title: 'Fumi', linkUrl: '/collections/fumi', imageUrl: '' },
+            { title: 'Snu', linkUrl: '/collections/snu', imageUrl: '' }
+          ]
+        }
       }
     ]
   },
