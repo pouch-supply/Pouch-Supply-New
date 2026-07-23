@@ -56,6 +56,8 @@ const ALLOWED_BRANDS = [
   'snu'
 ];
 
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80';
+
 export const mapVendorToAllowedBrand = (vendor: string | undefined): string => {
   if (!vendor) return '77';
   const vLower = vendor.trim().toLowerCase();
@@ -316,24 +318,57 @@ export default function App() {
           fetch('/api/layoutsettings').then(r => r.ok ? r.json() : null),
         ]);
 
-        if (Array.isArray(prodsRes)) {
-          setProducts(prodsRes);
+        if (Array.isArray(prodsRes) && prodsRes.length > 0) {
+          setProducts(prev => {
+            const map = new Map<string, Product>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of prodsRes) { if (item && item.id) map.set(item.id, item); }
+            const merged = Array.from(map.values());
+            if (merged.length > prodsRes.length) {
+              fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(merged) }).catch(() => {});
+            }
+            return merged;
+          });
           loadedProductsSuccess.current = true;
         }
-        if (Array.isArray(collsRes)) {
-          setCollections(collsRes);
+        if (Array.isArray(collsRes) && collsRes.length > 0) {
+          setCollections(prev => {
+            const map = new Map<string, Collection>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of collsRes) { if (item && item.id) map.set(item.id, item); }
+            const merged = Array.from(map.values());
+            if (merged.length > collsRes.length) {
+              fetch('/api/collections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(merged) }).catch(() => {});
+            }
+            return merged;
+          });
           loadedCollectionsSuccess.current = true;
         }
-        if (Array.isArray(ordersRes)) {
-          setOrders(ordersRes);
+        if (Array.isArray(ordersRes) && ordersRes.length > 0) {
+          setOrders(prev => {
+            const map = new Map<string, Order>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of ordersRes) { if (item && item.id) map.set(item.id, item); }
+            return Array.from(map.values());
+          });
           loadedOrdersSuccess.current = true;
         }
-        if (Array.isArray(filesRes)) {
-          setFiles(filesRes);
+        if (Array.isArray(filesRes) && filesRes.length > 0) {
+          setFiles(prev => {
+            const map = new Map<string, FileEntry>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of filesRes) { if (item && item.id) map.set(item.id, item); }
+            return Array.from(map.values());
+          });
           loadedFilesSuccess.current = true;
         }
-        if (Array.isArray(custsRes)) {
-          setCustomers(custsRes);
+        if (Array.isArray(custsRes) && custsRes.length > 0) {
+          setCustomers(prev => {
+            const map = new Map<string, Customer>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of custsRes) { if (item && item.id) map.set(item.id, item); }
+            return Array.from(map.values());
+          });
           loadedCustomersSuccess.current = true;
           
           // Sync currently logged-in customer's details immediately on load
@@ -342,7 +377,7 @@ export default function App() {
             try {
               const savedObj = JSON.parse(savedStr);
               if (savedObj && savedObj.email) {
-                const fresh = custsRes.find(c => c.id === savedObj.id || c.email.toLowerCase() === savedObj.email.toLowerCase());
+                const fresh = custsRes.find((c: any) => c.id === savedObj.id || c.email.toLowerCase() === savedObj.email.toLowerCase());
                 if (fresh) {
                   setLoggedInCustomer(fresh);
                 }
@@ -350,25 +385,54 @@ export default function App() {
             } catch (e) {}
           }
         }
-        if (Array.isArray(discsRes)) {
-          setDiscounts(discsRes);
+        if (Array.isArray(discsRes) && discsRes.length > 0) {
+          setDiscounts(prev => {
+            const map = new Map<string, Discount>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of discsRes) { if (item && item.id) map.set(item.id, item); }
+            return Array.from(map.values());
+          });
           loadedDiscountsSuccess.current = true;
         }
         if (Array.isArray(pagesRes) && pagesRes.length > 0) {
-          let finalPages = [...pagesRes];
-          if (!finalPages.some((p: any) => p && p.isHomepage)) {
-            const defaultHome = DEFAULT_PAGES.find((p: any) => p.isHomepage);
-            if (defaultHome) finalPages = [defaultHome, ...finalPages];
-          }
-          if (!finalPages.some((p: any) => p && p.slug === 'subscribe')) {
-            const defaultSub = DEFAULT_PAGES.find((p: any) => p.slug === 'subscribe');
-            if (defaultSub) finalPages = [...finalPages, defaultSub];
-          }
-          setCustomPages(finalPages);
+          setCustomPages(prev => {
+            const pageMap = new Map<string, CustomPage>();
+            for (const p of prev) {
+              if (p && (p.id || p.slug)) pageMap.set(p.id || p.slug, p);
+            }
+            for (const p of pagesRes) {
+              if (p && (p.id || p.slug)) {
+                const existing = pageMap.get(p.id || p.slug);
+                pageMap.set(p.id || p.slug, existing ? { ...existing, ...p } : p);
+              }
+            }
+            let merged = Array.from(pageMap.values());
+            if (!merged.some((p: any) => p && p.isHomepage)) {
+              const defaultHome = DEFAULT_PAGES.find((p: any) => p.isHomepage);
+              if (defaultHome) merged = [defaultHome, ...merged];
+            }
+            if (!merged.some((p: any) => p && p.slug === 'subscribe')) {
+              const defaultSub = DEFAULT_PAGES.find((p: any) => p.slug === 'subscribe');
+              if (defaultSub) merged = [...merged, defaultSub];
+            }
+            if (merged.length > pagesRes.length) {
+              fetch('/api/custompages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(merged)
+              }).catch(() => {});
+            }
+            return merged;
+          });
           loadedPagesSuccess.current = true;
         }
-        if (Array.isArray(blogsRes)) {
-          setBlogs(blogsRes);
+        if (Array.isArray(blogsRes) && blogsRes.length > 0) {
+          setBlogs(prev => {
+            const map = new Map<string, BlogPost>();
+            for (const item of prev) { if (item && item.id) map.set(item.id, item); }
+            for (const item of blogsRes) { if (item && item.id) map.set(item.id, item); }
+            return Array.from(map.values());
+          });
           loadedBlogsSuccess.current = true;
         }
         

@@ -32,6 +32,38 @@ const memoryCache: Record<string, any[]> = {
   blogs: [...INITIAL_BLOGS],
 };
 
+const BACKUP_FILE_PATH = path.join(process.cwd(), 'local_store_data.json');
+
+function loadMemoryCacheFromBackup() {
+  try {
+    if (fs.existsSync(BACKUP_FILE_PATH)) {
+      const raw = fs.readFileSync(BACKUP_FILE_PATH, 'utf8');
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        for (const key of Object.keys(data)) {
+          if (Array.isArray(data[key]) && data[key].length > 0) {
+            memoryCache[key] = data[key];
+          }
+        }
+        console.log('[Local Backup] Successfully loaded memoryCache from local_store_data.json backup.');
+      }
+    }
+  } catch (err) {
+    console.warn('[Local Backup] Could not load local_store_data.json backup:', err);
+  }
+}
+
+function persistMemoryCacheToBackup() {
+  try {
+    fs.writeFileSync(BACKUP_FILE_PATH, JSON.stringify(memoryCache, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[Local Backup] Could not write to local_store_data.json backup:', err);
+  }
+}
+
+// Load disk backup immediately on server startup
+loadMemoryCacheFromBackup();
+
 function normalizeResourceName(resource: string): string {
   if (!resource) return resource;
   const lower = resource.toLowerCase();
@@ -70,10 +102,18 @@ async function seedIfEmpty() {
     try {
       const model = pair.model as any;
       const count = await model.countDocuments();
-      if (count === 0 && pair.data && pair.data.length > 0) {
-        console.log(`[Mongoose Seeding] Collection "${pair.name}" is empty. Seeding with ${pair.data.length} default items...`);
-        // We clean documents from _id and other Mongoose-specific things to perform a clean insertMany
-        await model.insertMany(pair.data.map(item => ({ ...item })));
+      if (count === 0) {
+        // Use locally cached data if available (user created items), otherwise default initial data
+        const cached = memoryCache[pair.name] || [];
+        const sourceData = cached.length > 0 ? cached : (pair.data || []);
+        if (sourceData && sourceData.length > 0) {
+          console.log(`[Mongoose Seeding] Collection "${pair.name}" is empty in MongoDB. Seeding with ${sourceData.length} items from cache/defaults...`);
+          for (const item of sourceData) {
+            if (!item.id) continue;
+            const { _id, __v, ...cleanItem } = item;
+            await model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
+          }
+        }
       }
     } catch (e) {
       console.error(`[Mongoose Seeding] Failed to seed ${pair.name}:`, e);
@@ -213,7 +253,6 @@ function checkAndResetOnNetworkError(error: any) {
 // Global resource controllers that fetch from Mongoose DB or fallback to memory
 export async function fetchResource(resource: string): Promise<any[]> {
   const normResource = normalizeResourceName(resource);
-  const mongoUri = process.env.MONGODB_URI;
   try {
     const conn = await connectMongoose();
     const Model = getModelForResource(normResource) as any;
@@ -221,18 +260,36 @@ export async function fetchResource(resource: string): Promise<any[]> {
       await seedIfEmpty();
       let docs = await Model.find({}).lean().exec();
       
-      // If collection is still empty after fetch, return memoryCache fallback if populated
-      if ((!docs || docs.length === 0) && memoryCache[normResource] && memoryCache[normResource].length > 0) {
-        return memoryCache[normResource];
-      }
-
-      // Remove Mongoose/Mongo specific identifiers to map clean object models for the front-end
-      return docs.map((doc: any) => {
+      let cleanDocs = (docs || []).map((doc: any) => {
         const { _id, __v, ...cleanDoc } = doc;
         return cleanDoc;
       });
-    } else {
-      // Offline / fallback mode
+
+      // Merge with locally cached backup items so user-created items are NEVER lost
+      const cached = memoryCache[normResource] || memoryCache[resource] || [];
+      if (cached.length > 0) {
+        const dbIds = new Set(cleanDocs.map((d: any) => d.id));
+        let mergedCount = 0;
+        for (const item of cached) {
+          if (item && item.id && !dbIds.has(item.id)) {
+            cleanDocs.push(item);
+            dbIds.add(item.id);
+            mergedCount++;
+            // Upsert missing local item into MongoDB background
+            const { _id, __v, ...cleanItem } = item;
+            Model.replaceOne({ id: item.id }, cleanItem, { upsert: true }).catch(() => {});
+          }
+        }
+        if (mergedCount > 0) {
+          console.log(`[fetchResource] Seamlessly merged ${mergedCount} local items into DB response for "${normResource}".`);
+        }
+      }
+
+      memoryCache[normResource] = cleanDocs;
+      if (normResource !== resource) memoryCache[resource] = cleanDocs;
+      persistMemoryCacheToBackup();
+
+      return cleanDocs;
     }
   } catch (error: any) {
     checkAndResetOnNetworkError(error);
@@ -254,13 +311,13 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
     return memoryCache[normResource] || [];
   }
 
-  // Synchronously update local fallback cache
+  // Synchronously update local fallback cache and persist backup
   memoryCache[normResource] = [...list];
   if (normResource !== resource) {
     memoryCache[resource] = memoryCache[normResource];
   }
+  persistMemoryCacheToBackup();
 
-  const mongoUri = process.env.MONGODB_URI;
   try {
     const conn = await connectMongoose();
     const Model = getModelForResource(normResource) as any;
@@ -277,14 +334,11 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
       // Upsert current items using replaceOne to avoid duplicate or outdated structures
       for (const item of list) {
         if (!item.id) continue;
-        // Strip out any _id or __v fields to prevent "Performing an update on the path '_id' would modify the immutable field '_id'" error
         const { _id, __v, ...cleanItem } = item;
         await Model.replaceOne({ id: item.id }, cleanItem, { upsert: true });
       }
       console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;
-    } else {
-      // Local cache mode
     }
   } catch (error: any) {
     checkAndResetOnNetworkError(error);
@@ -331,6 +385,7 @@ export async function saveSingleItem(resource: string, item: any): Promise<any> 
   if (normResource !== resource) {
     memoryCache[resource] = items;
   }
+  persistMemoryCacheToBackup();
 
   try {
     const conn = await connectMongoose();
@@ -358,6 +413,7 @@ export async function deleteSingleItem(resource: string, id: string): Promise<bo
   if (normResource !== resource && memoryCache[resource]) {
     memoryCache[resource] = memoryCache[resource].filter((i: any) => i.id !== id);
   }
+  persistMemoryCacheToBackup();
 
   try {
     const conn = await connectMongoose();
