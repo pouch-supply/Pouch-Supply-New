@@ -34,8 +34,38 @@ function getDecodedSecretKey(rawKey: string): string {
 }
 
 /**
- * Gets the target AgeChecked API base URL depending on environment
+ * Strips HTML tags or extracts concise title/text from HTML error responses
  */
+function cleanResponseText(rawText: string): string {
+  if (!rawText) return "";
+  const trimmed = rawText.trim();
+  if (trimmed.startsWith("<") || trimmed.includes("<!DOCTYPE") || trimmed.includes("<html")) {
+    const titleMatch = trimmed.match(/<title>(.*?)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      return titleMatch[1].replace(/IIS \d+\.\d+ Detailed Error - /, '').trim();
+    }
+    return "API Endpoint returned HTML error page (e.g. 404 Not Found or 500 Internal Error)";
+  }
+  return rawText.slice(0, 300);
+}
+
+/**
+ * Gets the target AgeChecked API endpoint URL
+ */
+function getApiEndpoint(): string {
+  if (ageCheckedConfig.customApiUrl) {
+    const custom = ageCheckedConfig.customApiUrl.trim();
+    if (custom.includes("/verify")) {
+      return custom;
+    }
+    return `${custom.replace(/\/$/, "")}/v3/verify`;
+  }
+  const base = ageCheckedConfig.environment === "production"
+    ? "https://api.agechecked.com"
+    : "https://sandbox.agechecked.com";
+  return `${base}/v3/verify`;
+}
+
 function getApiBaseUrl(): string {
   if (ageCheckedConfig.customApiUrl) {
     return ageCheckedConfig.customApiUrl.replace(/\/$/, "");
@@ -151,7 +181,7 @@ router.post("/verify", async (req, res) => {
 
     const payloadString = JSON.stringify(requestPayload);
     const signature = generateHmacSignature(payloadString, timestamp);
-    const baseUrl = getApiBaseUrl();
+    const targetEndpoint = getApiEndpoint();
 
     const maskedPubKey = ageCheckedConfig.publicKey 
       ? `${ageCheckedConfig.publicKey.substring(0, 8)}...${ageCheckedConfig.publicKey.substring(ageCheckedConfig.publicKey.length - 8)}`
@@ -163,12 +193,12 @@ router.post("/verify", async (req, res) => {
     let detailsStr = "";
 
     try {
-      console.log(`[AgeChecked API Outbound] Connecting to ${baseUrl}/v3/verify for customer: ${name || 'Client'} (${method})`);
+      console.log(`[AgeChecked API Outbound] Connecting to ${targetEndpoint} for customer: ${name || 'Client'} (${method})`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
 
-      const response = await fetch(`${baseUrl}/v3/verify`, {
+      const response = await fetch(targetEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -192,11 +222,12 @@ router.post("/verify", async (req, res) => {
         console.log(`[AgeChecked API] Outbound API response:`, apiResponseData);
       } else {
         const errorText = await response.text();
-        console.warn(`[AgeChecked API] Outbound endpoint returned ${response.status}: ${errorText}`);
+        const cleanMsg = cleanResponseText(errorText);
+        console.warn(`[AgeChecked API] Outbound endpoint (${targetEndpoint}) returned ${response.status}: ${cleanMsg}`);
         return res.status(response.status || 400).json({
           success: false,
           verified: false,
-          error: `AgeChecked API returned error status ${response.status}: ${errorText || 'Invalid credentials or verification failed.'}`,
+          error: `AgeChecked API (${targetEndpoint}) returned error status ${response.status}: ${cleanMsg || 'Invalid credentials or verification endpoint URL.'}`,
           publicKeyUsed: maskedPubKey
         });
       }
@@ -205,7 +236,7 @@ router.post("/verify", async (req, res) => {
       return res.status(502).json({
         success: false,
         verified: false,
-        error: `Failed to connect to AgeChecked official API endpoint (${baseUrl}): ${fetchErr.message || 'Connection timeout'}. Please verify AgeChecked API keys in Admin Dashboard.`,
+        error: `Failed to connect to AgeChecked API endpoint (${targetEndpoint}): ${fetchErr.message || 'Connection timeout'}. Please check your AgeChecked API Endpoint URL in Admin Settings.`,
         publicKeyUsed: maskedPubKey
       });
     }

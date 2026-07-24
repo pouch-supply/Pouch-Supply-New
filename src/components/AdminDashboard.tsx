@@ -760,6 +760,7 @@ export default function AdminDashboard({
     environment: 'production' as 'production' | 'sandbox',
     serviceId: 'pouch_supply_uk_18',
     minimumAge: 18,
+    customApiUrl: '',
     active: true,
     apiUrl: 'https://api.agechecked.com',
     totalVerifiedCount: 0,
@@ -10301,6 +10302,18 @@ export default function AdminDashboard({
                         placeholder="pouch_supply_uk_18"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Custom API Endpoint URL (Optional Override)</label>
+                    <input 
+                      type="text" 
+                      value={ageCheckedSettings.customApiUrl || ''}
+                      onChange={e => setAgeCheckedSettings({ ...ageCheckedSettings, customApiUrl: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      placeholder="e.g. https://api.agechecked.com/v3/verify or custom merchant endpoint"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Leave blank to use default production URL (https://api.agechecked.com/v3/verify)</p>
                   </div>
 
                   <div>
