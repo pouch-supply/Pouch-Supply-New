@@ -15,7 +15,7 @@ import customPagesRouter from "./backend/routes/customPages";
 import blogsRouter from "./backend/routes/blogs";
 import worldpayRouter from "./backend/routes/worldpay";
 import agecheckedRouter from "./backend/routes/agechecked";
-import { sendOrderConfirmationEmail } from "./backend/email";
+import { sendOrderConfirmationEmail, sendTestEmail, getEmailConfig, updateEmailConfig } from "./backend/email";
 
 export function parseCloudinaryCredentials(rawCloudName?: string, rawApiKey?: string, rawApiSecret?: string) {
   let cloudName = (rawCloudName || "").trim();
@@ -430,6 +430,30 @@ export async function createExpressApp() {
   app.use("/api/worldpay", worldpayRouter);
   app.use("/api/agechecked", agecheckedRouter);
 
+  // API Route: Email Settings & Dispatch
+  app.get("/api/email/settings", (req, res) => {
+    res.json(getEmailConfig());
+  });
+
+  app.post("/api/email/settings", (req, res) => {
+    try {
+      const updated = updateEmailConfig(req.body);
+      res.json({ success: true, config: updated, message: "Email SMTP configuration updated successfully." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to update email configuration" });
+    }
+  });
+
+  app.post("/api/email/test", async (req, res) => {
+    try {
+      const { toEmail } = req.body;
+      const result = await sendTestEmail(toEmail);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message || "Test email delivery failed." });
+    }
+  });
+
   // API Route: Trigger automatic order confirmation emails (from scottkivlinpouch@gmail.com)
   app.post("/api/send-order-confirmation", async (req, res) => {
     try {
@@ -438,12 +462,13 @@ export async function createExpressApp() {
         return res.status(400).json({ error: "Missing order details or customer email address." });
       }
       console.log(`[Order Email Endpoint] Dispatching order confirmation for Order #${order.id} to ${order.customerEmail}`);
-      const success = await sendOrderConfirmationEmail(order);
+      const result = await sendOrderConfirmationEmail(order);
       res.json({ 
-        success: true, 
-        message: `Order confirmation email processed for ${order.customerEmail}`, 
+        success: result.success, 
+        message: result.message, 
         orderId: order.id,
-        sender: "scottkivlinpouch@gmail.com"
+        sender: "scottkivlinpouch@gmail.com",
+        error: result.error
       });
     } catch (err: any) {
       console.error("[Order Email Endpoint] Error dispatching email:", err);

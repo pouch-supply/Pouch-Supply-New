@@ -555,7 +555,7 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
   );
 }
 
-type SidebarTab = 'analytics' | 'orders' | 'collections' | 'products' | 'pages' | 'blogs' | 'files' | 'customers' | 'discounts' | 'layout' | 'royalmail';
+type SidebarTab = 'analytics' | 'orders' | 'collections' | 'products' | 'pages' | 'blogs' | 'files' | 'customers' | 'discounts' | 'layout' | 'royalmail' | 'email' | 'agechecked';
 
 export default function AdminDashboard({
   products: parentProducts,
@@ -593,7 +593,9 @@ export default function AdminDashboard({
     customers: 'customers',
     discounts: 'discounts',
     layout: 'layout',
-    royalmail: 'royal-mail'
+    royalmail: 'royal-mail',
+    email: 'email-confirmations',
+    agechecked: 'agechecked-api'
   };
 
   const pathToTabMap: Record<string, SidebarTab> = {
@@ -607,7 +609,9 @@ export default function AdminDashboard({
     customers: 'customers',
     discounts: 'discounts',
     layout: 'layout',
-    'royal-mail': 'royalmail'
+    'royal-mail': 'royalmail',
+    'email-confirmations': 'email',
+    'agechecked-api': 'agechecked'
   };
 
   const getInitialTab = (): SidebarTab => {
@@ -676,6 +680,162 @@ export default function AdminDashboard({
   const [dbDetailsLoading, setDbDetailsLoading] = useState(false);
   const [dbDetailsData, setDbDetailsData] = useState<any | null>(null);
   const [dbDetailsError, setDbDetailsError] = useState<string | null>(null);
+
+  // Email Dispatcher State
+  const [emailSettings, setEmailSettings] = useState({
+    senderEmail: 'scottkivlinpouch@gmail.com',
+    smtpUser: 'scottkivlinpouch@gmail.com',
+    smtpPass: '',
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 465,
+    hasPasswordSet: false
+  });
+  const [testEmailRecipient, setTestEmailRecipient] = useState('scottkivlinpouch@gmail.com');
+  const [emailStatusMsg, setEmailStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [isSavingEmailSettings, setIsSavingEmailSettings] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/email/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setEmailSettings(data);
+      })
+      .catch(err => console.error("Failed to fetch email settings:", err));
+  }, []);
+
+  const handleSaveEmailSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingEmailSettings(true);
+    setEmailStatusMsg(null);
+    try {
+      const res = await fetch('/api/email/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailSettings)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailSettings(data.config);
+        setEmailStatusMsg({ type: 'success', text: 'Email SMTP configuration saved successfully!' });
+      } else {
+        setEmailStatusMsg({ type: 'error', text: data.error || 'Failed to update email settings' });
+      }
+    } catch (err: any) {
+      setEmailStatusMsg({ type: 'error', text: err.message || 'Error connecting to server.' });
+    } finally {
+      setIsSavingEmailSettings(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setIsSendingTestEmail(true);
+    setEmailStatusMsg(null);
+    try {
+      const res = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toEmail: testEmailRecipient })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailStatusMsg({ type: 'success', text: data.message });
+      } else {
+        setEmailStatusMsg({ 
+          type: 'error', 
+          text: `${data.message} ${data.hint || ''}`.trim() 
+        });
+      }
+    } catch (err: any) {
+      setEmailStatusMsg({ type: 'error', text: err.message || 'Failed to dispatch test email' });
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+
+  // AgeChecked Compliance API State
+  const [ageCheckedSettings, setAgeCheckedSettings] = useState({
+    publicKey: 'RFGzMiuNjEGeAICshAEISF5aBwvq3FmtWZYxC2E98V5Y8qUR1U9Umy8v87Wwi99o',
+    secretKey: '',
+    environment: 'production' as 'production' | 'sandbox',
+    serviceId: 'pouch_supply_uk_18',
+    minimumAge: 18,
+    active: true,
+    apiUrl: 'https://api.agechecked.com',
+    totalVerifiedCount: 0,
+    hasSecretKeySet: false
+  });
+  const [ageCheckedStatusMsg, setAgeCheckedStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSavingAgeChecked, setIsSavingAgeChecked] = useState(false);
+  const [isTestingAgeChecked, setIsTestingAgeChecked] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/agechecked/config')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setAgeCheckedSettings(prev => ({
+            ...prev,
+            publicKey: data.publicKey || prev.publicKey,
+            environment: data.environment || 'production',
+            serviceId: data.serviceId || 'pouch_supply_uk_18',
+            minimumAge: data.minimumAge || 18,
+            active: data.active,
+            apiUrl: data.apiUrl || 'https://api.agechecked.com',
+            totalVerifiedCount: data.totalVerifiedCount || 0,
+            hasSecretKeySet: data.hasSecretKeySet
+          }));
+        }
+      })
+      .catch(err => console.error("Failed to load AgeChecked settings:", err));
+  }, []);
+
+  const handleSaveAgeCheckedSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingAgeChecked(true);
+    setAgeCheckedStatusMsg(null);
+    try {
+      const res = await fetch('/api/agechecked/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ageCheckedSettings)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAgeCheckedStatusMsg({ type: 'success', text: 'AgeChecked API settings saved successfully!' });
+      } else {
+        setAgeCheckedStatusMsg({ type: 'error', text: data.error || 'Failed to save AgeChecked settings.' });
+      }
+    } catch (err: any) {
+      setAgeCheckedStatusMsg({ type: 'error', text: err.message || 'Error connecting to server.' });
+    } finally {
+      setIsSavingAgeChecked(false);
+    }
+  };
+
+  const handleTestAgeCheckedConnection = async () => {
+    setIsTestingAgeChecked(true);
+    setAgeCheckedStatusMsg(null);
+    try {
+      const res = await fetch('/api/agechecked/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAgeCheckedStatusMsg({ 
+          type: 'success', 
+          text: `[HTTP ${data.statusCode}] ${data.message} (${data.environment.toUpperCase()} Mode)` 
+        });
+      } else {
+        setAgeCheckedStatusMsg({ type: 'error', text: data.message || 'Connection test failed.' });
+      }
+    } catch (err: any) {
+      setAgeCheckedStatusMsg({ type: 'error', text: err.message || 'Error testing AgeChecked connection.' });
+    } finally {
+      setIsTestingAgeChecked(false);
+    }
+  };
 
   // Custom confirmation dialog state to replace blocked window.confirm in sandboxed iframe
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -2810,6 +2970,8 @@ export default function AdminDashboard({
                 { id: 'customers', label: 'Customers', icon: Users },
                 { id: 'discounts', label: 'Discounts', icon: Percent },
                 { id: 'royalmail', label: 'Royal Mail API', icon: Truck },
+                { id: 'email', label: 'Email Confirmations', icon: Mail },
+                { id: 'agechecked', label: 'AgeChecked API', icon: ShieldCheck },
                 { id: 'layout', label: 'Header & Footer', icon: Settings },
               ].map(item => {
                 const Icon = item.icon;
@@ -9818,6 +9980,400 @@ export default function AdminDashboard({
               </div>
 
             </div>
+          </div>
+        )}
+
+        {/* AUTOMATIC ORDER CONFIRMATION EMAIL TAB */}
+        {activeTab === 'email' && (
+          <div className="space-y-6 max-w-5xl mx-auto text-xs text-left animate-fade-in pb-12">
+            
+            {/* Header Banner */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white border border-slate-200 p-5 rounded-2xl shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-[#e1192e] shrink-0">
+                  <Mail className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Automatic Order Confirmation Emails</h3>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-extrabold uppercase tracking-wider">
+                      Active Dispatch
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-[10px] font-medium mt-0.5">
+                    Order confirmation receipts are automatically dispatched from <strong className="text-slate-800">scottkivlinpouch@gmail.com</strong> whenever a customer places an order.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSendTestEmail}
+                  disabled={isSendingTestEmail}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isSendingTestEmail ? 'animate-spin' : ''}`} />
+                  <span>{isSendingTestEmail ? 'Sending Test...' : 'Send Test Confirmation'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Status Alert Banner */}
+            {emailStatusMsg && (
+              <div className={`p-4 rounded-xl border text-xs flex items-center gap-3 animate-fade-in ${
+                emailStatusMsg.type === 'success' 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                {emailStatusMsg.type === 'success' ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="font-bold">{emailStatusMsg.text}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Settings Form */}
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b pb-3 border-slate-100">
+                  <h4 className="font-extrabold text-slate-900 text-sm">Gmail SMTP Credentials</h4>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">scottkivlinpouch@gmail.com</span>
+                </div>
+
+                <form onSubmit={handleSaveEmailSettings} className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Sender Email Address</label>
+                    <input 
+                      type="email" 
+                      value={emailSettings.senderEmail}
+                      onChange={e => setEmailSettings({ ...emailSettings, senderEmail: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      placeholder="scottkivlinpouch@gmail.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">SMTP User / Username</label>
+                    <input 
+                      type="text" 
+                      value={emailSettings.smtpUser}
+                      onChange={e => setEmailSettings({ ...emailSettings, smtpUser: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      placeholder="scottkivlinpouch@gmail.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase">Gmail App Password</label>
+                      <span className="text-[10px] text-slate-400 italic">16-character code</span>
+                    </div>
+                    <input 
+                      type="password" 
+                      value={emailSettings.smtpPass}
+                      onChange={e => setEmailSettings({ ...emailSettings, smtpPass: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      placeholder={emailSettings.hasPasswordSet ? "•••••••••••• (Saved)" : "Enter 16-character Gmail App Password"}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      To create a Gmail App Password: Go to Google Account &gt; Security &gt; 2-Step Verification &gt; App Passwords.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">SMTP Server Host</label>
+                      <input 
+                        type="text" 
+                        value={emailSettings.smtpHost}
+                        onChange={e => setEmailSettings({ ...emailSettings, smtpHost: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">SMTP Port</label>
+                      <input 
+                        type="number" 
+                        value={emailSettings.smtpPort}
+                        onChange={e => setEmailSettings({ ...emailSettings, smtpPort: Number(e.target.value) })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingEmailSettings}
+                    className="w-full py-2.5 bg-[#e1192e] hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{isSavingEmailSettings ? 'Saving Settings...' : 'Save Email Credentials'}</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Test Email Dispatch Card */}
+              <div className="space-y-6">
+                <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-4">
+                  <h4 className="font-extrabold text-slate-900 text-sm border-b pb-3 border-slate-100">Send Live Test Email</h4>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Test the order confirmation email dispatcher by sending a sample order verification email to any inbox.
+                  </p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Recipient Email</label>
+                      <input 
+                        type="email" 
+                        value={testEmailRecipient}
+                        onChange={e => setTestEmailRecipient(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                        placeholder="scottkivlinpouch@gmail.com"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSendTestEmail}
+                      disabled={isSendingTestEmail}
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Mail className="h-4 w-4 text-emerald-400" />
+                      <span>{isSendingTestEmail ? 'Sending Test Email...' : 'Send Live Test Email'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Email Features Info Card */}
+                <div className="bg-slate-900 text-white p-6 rounded-2xl space-y-3 shadow-md">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Included in Order Confirmation Email</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-slate-300 font-medium">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      <span>Official Order ID & Timestamp</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      <span>Itemized product breakdown & quantity pricing</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      <span>Royal Mail Track & Trace reference number</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      <span>Delivery address and customer support contacts</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* AGECHECKED COMPLIANCE API TAB */}
+        {activeTab === 'agechecked' && (
+          <div className="space-y-6 max-w-5xl mx-auto text-xs text-left animate-fade-in pb-12">
+            
+            {/* Header Banner */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white border border-slate-200 p-5 rounded-2xl shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">AgeChecked UK Compliance API</h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
+                      ageCheckedSettings.environment === 'production'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {ageCheckedSettings.environment.toUpperCase()} MODE
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-[10px] font-medium mt-0.5">
+                    Official UK PAS 1296 compliant age verification integration connected to AgeChecked v3 API.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleTestAgeCheckedConnection}
+                  disabled={isTestingAgeChecked}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isTestingAgeChecked ? 'animate-spin' : ''}`} />
+                  <span>{isTestingAgeChecked ? 'Testing Connection...' : 'Test API Connection'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Status Alert Banner */}
+            {ageCheckedStatusMsg && (
+              <div className={`p-4 rounded-xl border text-xs flex items-center gap-3 animate-fade-in ${
+                ageCheckedStatusMsg.type === 'success' 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                {ageCheckedStatusMsg.type === 'success' ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="font-bold">{ageCheckedStatusMsg.text}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Settings Form */}
+              <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b pb-3 border-slate-100">
+                  <h4 className="font-extrabold text-slate-900 text-sm">AgeChecked API Credentials</h4>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PAS 1296 Standard</span>
+                </div>
+
+                <form onSubmit={handleSaveAgeCheckedSettings} className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Public Key</label>
+                    <input 
+                      type="text" 
+                      value={ageCheckedSettings.publicKey}
+                      onChange={e => setAgeCheckedSettings({ ...ageCheckedSettings, publicKey: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      placeholder="RFGzMiu..."
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase">Secret Key</label>
+                      <span className="text-[10px] text-slate-400 italic">HMAC-SHA256 Signing Key</span>
+                    </div>
+                    <input 
+                      type="password" 
+                      value={ageCheckedSettings.secretKey}
+                      onChange={e => setAgeCheckedSettings({ ...ageCheckedSettings, secretKey: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                      placeholder={ageCheckedSettings.hasSecretKeySet ? "•••••••••••• (Saved)" : "Enter AgeChecked Secret Key"}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Environment Mode</label>
+                      <select
+                        value={ageCheckedSettings.environment}
+                        onChange={e => setAgeCheckedSettings({ ...ageCheckedSettings, environment: e.target.value as 'production' | 'sandbox' })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none cursor-pointer"
+                      >
+                        <option value="production">Production (api.agechecked.com)</option>
+                        <option value="sandbox">Sandbox (sandbox.agechecked.com)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Service ID</label>
+                      <input 
+                        type="text" 
+                        value={ageCheckedSettings.serviceId}
+                        onChange={e => setAgeCheckedSettings({ ...ageCheckedSettings, serviceId: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                        placeholder="pouch_supply_uk_18"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Minimum Verified Age Requirement</label>
+                    <input 
+                      type="number" 
+                      value={ageCheckedSettings.minimumAge}
+                      onChange={e => setAgeCheckedSettings({ ...ageCheckedSettings, minimumAge: Number(e.target.value) })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-slate-900 outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingAgeChecked}
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{isSavingAgeChecked ? 'Saving Settings...' : 'Save AgeChecked API Credentials'}</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Compliance & Webhook Details */}
+              <div className="space-y-6">
+                <div className="bg-slate-900 text-white p-6 rounded-2xl space-y-4 shadow-md">
+                  <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-widest">
+                    <ShieldCheck className="h-5 w-5 text-blue-400" />
+                    <span>UK PAS 1296 Verified Methods</span>
+                  </div>
+                  <p className="text-slate-300 text-xs leading-relaxed">
+                    AgeChecked API v3 provides multi-channel age verification compliant with UK nicotine & vape sale regulations.
+                  </p>
+                  <ul className="space-y-2 text-xs text-slate-300 font-medium">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                      <span><strong>UK Electoral Register</strong>: Match name, DOB, and postcode</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                      <span><strong>Credit Card Pre-Auth</strong>: 18+ cardholder account validation</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                      <span><strong>Mobile Network Lookup</strong>: EE, Vodafone, O2, Three carrier database check</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                      <span><strong>Government ID Scanner</strong>: Passport & UK Photo Driving Licence</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                      <span><strong>Facial Age Estimation</strong>: AI biometric 18+ age verification</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-3">
+                  <h4 className="font-extrabold text-slate-900 text-sm border-b pb-3 border-slate-100">AgeChecked Webhook Endpoint</h4>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Your store provides an automated webhook listener for asynchronous verification events:
+                  </p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800 break-all">
+                    https://your-domain.com/api/agechecked/webhook
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic">
+                    Webhooks are signed using your HMAC-SHA256 secret key to guarantee authenticity.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         )}
 

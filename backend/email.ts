@@ -1,25 +1,66 @@
 import nodemailer from "nodemailer";
 import { Order } from "../src/types";
 
-// Setup SMTP connection credentials using environment variables with the user's defaults
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "465", 10);
-const SMTP_SECURE = process.env.SMTP_SECURE !== "false"; // default true for port 465
-const SMTP_USER = process.env.SMTP_USER || "scottkivlinpouch@gmail.com";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const SENDER_EMAIL = process.env.SENDER_EMAIL || "scottkivlinpouch@gmail.com";
+// Dynamic in-memory configuration with environment variable fallbacks
+let currentEmailConfig = {
+  senderEmail: process.env.SENDER_EMAIL || process.env.EMAIL_FROM || "scottkivlinpouch@gmail.com",
+  smtpUser: process.env.SMTP_USER || process.env.EMAIL_USER || "scottkivlinpouch@gmail.com",
+  smtpPass: process.env.SMTP_PASS || process.env.EMAIL_PASS || "",
+  smtpHost: process.env.SMTP_HOST || process.env.EMAIL_HOST || "smtp.gmail.com",
+  smtpPort: parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || "465", 10),
+};
+
+export function getEmailConfig() {
+  return {
+    senderEmail: currentEmailConfig.senderEmail,
+    smtpUser: currentEmailConfig.smtpUser,
+    smtpPass: currentEmailConfig.smtpPass ? "••••••••••••" : "",
+    hasPasswordSet: Boolean(currentEmailConfig.smtpPass),
+    smtpHost: currentEmailConfig.smtpHost,
+    smtpPort: currentEmailConfig.smtpPort,
+  };
+}
+
+export function updateEmailConfig(config: Partial<typeof currentEmailConfig>) {
+  if (config.senderEmail) currentEmailConfig.senderEmail = config.senderEmail.trim();
+  if (config.smtpUser) currentEmailConfig.smtpUser = config.smtpUser.trim();
+  if (config.smtpPass !== undefined && config.smtpPass !== "••••••••••••") {
+    currentEmailConfig.smtpPass = config.smtpPass.trim();
+  }
+  if (config.smtpHost) currentEmailConfig.smtpHost = config.smtpHost.trim();
+  if (config.smtpPort) currentEmailConfig.smtpPort = Number(config.smtpPort);
+  return getEmailConfig();
+}
 
 /**
- * Creates a nodemailer transporter and attempts to verify connectivity
+ * Creates a nodemailer transporter using the configured credentials
  */
 function createTransporter() {
+  const host = currentEmailConfig.smtpHost;
+  const user = currentEmailConfig.smtpUser;
+  const pass = currentEmailConfig.smtpPass;
+  const port = currentEmailConfig.smtpPort;
+
+  if (host.includes("gmail") || user.endsWith("@gmail.com")) {
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: user,
+        pass: pass, // Gmail App Password
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  }
+
   return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_SECURE,
+    host: host,
+    port: port,
+    secure: port === 465,
     auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
+      user: user,
+      pass: pass,
     },
     tls: {
       rejectUnauthorized: false
@@ -28,11 +69,53 @@ function createTransporter() {
 }
 
 /**
+ * Sends a live test email to verify Gmail SMTP connection
+ */
+export async function sendTestEmail(toEmail: string) {
+  const recipient = toEmail || currentEmailConfig.senderEmail;
+  console.log(`[Email Service] Testing email connection to ${recipient} via ${currentEmailConfig.smtpUser}`);
+
+  try {
+    const transporter = createTransporter();
+    const info = await transporter.sendMail({
+      from: `"Pouch Supply Verification" <${currentEmailConfig.senderEmail}>`,
+      to: recipient,
+      subject: `Pouch Supply Email Verification Test`,
+      html: `
+        <div style="font-family: sans-serif; padding: 24px; max-width: 500px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+          <h2 style="color: #e1192e; margin-top: 0;">Pouch Supply Email Setup Verified</h2>
+          <p style="color: #334155; line-height: 1.5;">This is an automated test email confirming that your order confirmation email system is active and properly connected to <strong>${currentEmailConfig.smtpUser}</strong>.</p>
+          <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #64748b;">Sender: ${currentEmailConfig.senderEmail}<br/>Time: ${new Date().toLocaleString()}</p>
+        </div>
+      `
+    });
+
+    return {
+      success: true,
+      message: `Test email successfully delivered to ${recipient}!`,
+      messageId: info.messageId,
+      sender: currentEmailConfig.senderEmail
+    };
+  } catch (err: any) {
+    console.error("[Email Service] Test email error:", err);
+    return {
+      success: false,
+      message: err.message || "Failed to send test email.",
+      error: err.toString(),
+      sender: currentEmailConfig.senderEmail,
+      hint: !currentEmailConfig.smtpPass ? "Gmail requires a 16-character App Password when 2FA is enabled on your Google Account." : undefined
+    };
+  }
+}
+
+/**
  * Sends a highly styled order confirmation email to the customer
  * from scottkivlinpouch@gmail.com and sends a notification copy to scottkivlinpouch@gmail.com
  */
-export async function sendOrderConfirmationEmail(order: Order): Promise<boolean> {
-  console.log(`[Email Service] Preparing order confirmation email for Order ID: ${order.id} to ${order.customerEmail} (From: ${SENDER_EMAIL})`);
+export async function sendOrderConfirmationEmail(order: Order): Promise<{ success: boolean; message: string; error?: string }> {
+  const sender = currentEmailConfig.senderEmail;
+  console.log(`[Email Service] Preparing order confirmation email for Order ID: #${order.id} to ${order.customerEmail} (From: ${sender})`);
 
   // Create an elegant HTML template for the email
   const itemsHtml = (order.items || [])
@@ -153,7 +236,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<boolean>
 
     // 1. Send Order Confirmation to customer
     await transporter.sendMail({
-      from: `"Pouch Supply" <${SENDER_EMAIL}>`,
+      from: `"Pouch Supply" <${sender}>`,
       to: order.customerEmail,
       subject: `Order Confirmation #${order.id} - Pouch Supply`,
       html: emailHtml,
@@ -162,21 +245,26 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<boolean>
 
     // 2. Send Notification Copy to scottkivlinpouch@gmail.com
     try {
-      if (order.customerEmail !== SENDER_EMAIL) {
+      if (order.customerEmail !== sender) {
         await transporter.sendMail({
-          from: `"Pouch Supply Orders" <${SENDER_EMAIL}>`,
-          to: SENDER_EMAIL,
+          from: `"Pouch Supply Orders" <${sender}>`,
+          to: sender,
           subject: `[NEW ORDER] #${order.id} placed by ${order.customerName} (£${(order.total || 0).toFixed(2)})`,
           html: emailHtml,
         });
       }
     } catch (adminErr) {
-      console.warn(`[Email Service] Support notification copy notice:`, adminErr);
+      console.warn(`[Email Service] Admin copy notice:`, adminErr);
     }
 
-    return true;
+    return { success: true, message: `Order confirmation email sent to ${order.customerEmail}` };
   } catch (err: any) {
-    console.log(`[Email Service] SMTP dispatch notice for Order #${order.id}: ${err.message || err}. Order confirmation recorded successfully.`);
-    return true;
+    console.warn(`[Email Service] Order confirmation dispatch attempt for #${order.id}:`, err.message || err);
+    return {
+      success: false,
+      message: `Order processed. Email dispatch notice: ${err.message || 'SMTP authentication pending'}`,
+      error: err.toString()
+    };
   }
 }
+
