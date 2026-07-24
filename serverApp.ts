@@ -63,7 +63,7 @@ export async function createExpressApp() {
       return next();
     }
     express.json({
-      limit: "50mb",
+      limit: "250mb",
       verify: (req: any, _res, buf) => {
         req.rawBody = buf;
       }
@@ -74,7 +74,7 @@ export async function createExpressApp() {
     if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
       return next();
     }
-    express.urlencoded({ limit: "50mb", extended: true })(req, res, next);
+    express.urlencoded({ limit: "250mb", extended: true })(req, res, next);
   });
 
 

@@ -1588,7 +1588,7 @@ export default function PageRenderer({
                   const isLabDesc = !descInput || descInput.toLowerCase().includes('compounding') || descInput.toLowerCase().includes('laboratory') || descInput.toLowerCase().includes('sterile') || descInput.toLowerCase().includes('witness');
 
                   return (
-                    <div className="relative w-full overflow-hidden bg-[#071529] flex flex-col justify-between">
+                    <div className="relative w-full overflow-hidden bg-black flex flex-col justify-between">
                       
                       {/* Background Visual Layer */}
                       <div className="absolute inset-0 z-0 w-full h-full pointer-events-none">
@@ -1605,7 +1605,7 @@ export default function PageRenderer({
                             </div>
                           ) : (
                             <video
-                              className="w-full h-full object-cover opacity-80"
+                              className="w-full h-full object-cover opacity-100"
                               autoPlay
                               muted
                               loop
@@ -1617,14 +1617,14 @@ export default function PageRenderer({
                           <img
                             src={bgImage}
                             alt="Premium Nicotine Pouches Collection"
-                            className="w-full h-full object-cover object-center sm:object-right lg:object-right-bottom opacity-85"
+                            className="w-full h-full object-cover object-center sm:object-right lg:object-right-bottom opacity-90"
                             referrerPolicy="no-referrer"
                           />
                         )}
                         
-                        {/* Readability masks: dark solid overlay on mobile, beautiful horizontal fade on desktop */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#030914] via-[#030914]/90 to-transparent lg:from-[#030914] lg:via-[#030914]/75 lg:to-transparent z-10" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#030914]/45 via-transparent to-black/30 z-10" />
+                        {/* Subtle text readability gradient (no heavy dark blue overlay) */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent z-10" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent z-10" />
                       </div>
 
                       {/* Content Overlay */}

@@ -972,7 +972,7 @@ export default function AdminDashboard({
 
   // --- Royal Mail Click & Drop API Integration State ---
   const [rmIntegrationName, setRmIntegrationName] = useState(() => {
-    return localStorage.getItem('ps_rm_integration_name') || 'Pouch Supply Store';
+    return localStorage.getItem('ps_rm_integration_name') || 'Pouch-Supply';
   });
   const [rmApiKey, setRmApiKey] = useState(() => {
     return localStorage.getItem('ps_rm_api_key') || 'rm_cd_live_7a9f82d0119e84b321';
@@ -6742,15 +6742,23 @@ export default function AdminDashboard({
 
                             {/* Native MP4 File Uploader */}
                             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 space-y-2">
-                              <span className="text-[8.5px] font-black text-slate-500 uppercase block">Upload Local MP4 Video File</span>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[8.5px] font-black text-slate-650 uppercase block">Upload Local MP4 Video File</span>
+                                <span className="text-[8px] font-black text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded-full">Max 100MB</span>
+                              </div>
                               <input
                                 type="file"
-                                accept="video/mp4,video/*"
+                                accept="video/mp4,video/webm,video/*"
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
                                     if (!file.type.startsWith('video/')) {
                                       alert('Only video files are permitted (e.g., mp4, webm)!');
+                                      return;
+                                    }
+                                    const maxSizeBytes = 100 * 1024 * 1024; // 100MB
+                                    if (file.size > maxSizeBytes) {
+                                      alert(`Selected video file is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please select an MP4 file under 100MB.`);
                                       return;
                                     }
                                     const reader = new FileReader();
@@ -6772,7 +6780,7 @@ export default function AdminDashboard({
                                           }
                                         } catch (err: any) {
                                           console.error('[VideoUpload] API upload failed:', err);
-                                          alert('Upload failed. Please ensure the MP4 file size is under 50MB or enter a direct MP4 URL.');
+                                          alert('Upload failed. Please ensure the MP4 file size is under 100MB or enter a direct MP4 URL.');
                                         }
                                       }
                                     };
@@ -6781,6 +6789,7 @@ export default function AdminDashboard({
                                 }}
                                 className="text-[10px] w-full cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                               />
+                              <p className="text-[9px] text-slate-400 mt-0.5">Supports MP4, WebM up to 100MB file size.</p>
                             </div>
 
                             {/* Video Banner Overlay Content Customizer */}
