@@ -423,10 +423,31 @@ export default function CheckoutView({
 
   // Subtotal details calculated dynamically
   const rawSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  
+  // Auto-apply subscriber 10% discount if cart has subscription items and no discount selected yet
+  useEffect(() => {
+    if (!currentDiscount && cartItems.some(i => i.productId?.includes('sub-pack') || i.productTitle?.toLowerCase().includes('subscription') || i.productTitle?.toLowerCase().includes('pack'))) {
+      onApplyDiscount({
+        id: 'disc-sub-first50',
+        title: 'SUB10-FIRST50',
+        status: 'Active',
+        method: 'Code',
+        eligibility: 'All customers',
+        type: 'Amount off order',
+        valueType: 'Percentage',
+        valueAmount: 10,
+        used: 12,
+        details: '10% First 50 Subscribers Permanent Discount'
+      });
+    }
+  }, [cartItems, currentDiscount, onApplyDiscount]);
+
   const discountValue = calculateDiscountAmount(currentDiscount, cartItems, rawSubtotal);
   const subtotalAfterDiscount = Math.max(rawSubtotal - discountValue, 0);
 
-  const deliveryCost = currentDiscount?.type === 'Free shipping' ? 0 : (deliverySpeed === 'priority' ? (subtotalAfterDiscount >= 40 ? 0 : 4.99) : 0);
+  const deliveryCost = currentDiscount?.type === 'Free shipping' 
+    ? 0 
+    : (subtotalAfterDiscount >= 40 ? 0 : 2.99);
   const finalTotal = subtotalAfterDiscount + deliveryCost;
   const storeCreditAvailable = loggedInCustomer?.storeCredit || 0;
   const storeCreditApplied = applyStoreCredit ? Math.min(storeCreditAvailable, finalTotal) : 0;
@@ -931,38 +952,16 @@ export default function CheckoutView({
             {/* Delivery Speeds */}
             <div className="pt-2">
               <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-2">Delivery Method</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div 
-                  onClick={() => setDeliverySpeed('standard')}
-                  className={`border rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all ${
-                    deliverySpeed === 'standard' 
-                      ? 'border-slate-800 bg-slate-50 ring-1 ring-slate-800' 
-                      : 'border-slate-200 bg-white hover:border-slate-350'
-                  }`}
-                >
-                  <div className="text-left">
-                    <span className="font-extrabold text-xs block text-slate-800">Standard Pouch Mail</span>
-                    <span className="text-[10px] text-slate-400">Arrives in 3-5 business days</span>
-                  </div>
-                  <span className="font-black text-xs text-slate-800">FREE</span>
-                </div>
-
-                <div 
-                  onClick={() => setDeliverySpeed('priority')}
-                  className={`border rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all ${
-                    deliverySpeed === 'priority' 
-                      ? 'border-slate-800 bg-slate-50 ring-1 ring-slate-800' 
-                      : 'border-slate-200 bg-white hover:border-slate-350'
-                  }`}
-                >
-                  <div className="text-left">
-                    <span className="font-extrabold text-xs block text-slate-800">Worldpay Priority Tracked</span>
-                    <span className="text-[10px] text-slate-400">Guaranteed 24-48h dispatched</span>
-                  </div>
-                  <span className="font-black text-xs text-indigo-600">
-                    {totalAmount >= 40 ? 'FREE' : '£4.99'}
+              <div className="border border-slate-800 bg-slate-50 ring-1 ring-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+                <div className="text-left">
+                  <span className="font-extrabold text-xs block text-slate-800 flex items-center gap-1.5">
+                    <Truck className="h-4 w-4 text-indigo-600" /> Royal Mail
                   </span>
+                  <span className="text-[10px] text-slate-500">Arrives in 3–5 business days</span>
                 </div>
+                <span className={subtotalAfterDiscount >= 40 ? "font-black text-xs text-emerald-600" : "font-black text-xs text-slate-800"}>
+                  {subtotalAfterDiscount >= 40 ? 'FREE' : '£2.99'}
+                </span>
               </div>
             </div>
           </div>
@@ -1694,7 +1693,7 @@ export default function CheckoutView({
               )}
 
               <div className="flex justify-between text-slate-500">
-                <span>Delivery postage ({deliverySpeed === 'priority' ? 'Priority Express' : 'Standard Mail'})</span>
+                <span>Delivery postage (Royal Mail)</span>
                 <span>{deliveryCost === 0 ? 'FREE' : `£${deliveryCost.toFixed(2)}`}</span>
               </div>
 

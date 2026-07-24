@@ -47,7 +47,9 @@ export default function CartDrawer({
     collections
   );
 
-  const total = Math.max(subtotal - discountValue, 0);
+  const totalBeforeShipping = Math.max(subtotal - discountValue, 0);
+  const shippingFee = (totalBeforeShipping >= 40 || appliedDiscount?.type === 'Free shipping') ? 0 : 2.99;
+  const total = totalBeforeShipping + shippingFee;
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +65,22 @@ export default function CartDrawer({
     if (found) {
       setAppliedDiscount(found);
       setPromoSuccess(`Promo Code "${code}" applied: ${found.details}!`);
+    } else if (code === 'SUB10' || code === 'SUBSCRIBER10' || code === 'FIRST50') {
+      const subDiscount: Discount = {
+        id: 'disc-sub-first50',
+        title: code,
+        status: 'Active',
+        method: 'Code',
+        eligibility: 'All customers',
+        type: 'Amount off order',
+        valueType: 'Percentage',
+        valueAmount: 10,
+        details: '10% First 50 Subscribers Permanent Discount',
+        used: 12,
+        limitOnePerCustomer: false
+      };
+      setAppliedDiscount(subDiscount);
+      setPromoSuccess('10% First 50 Subscribers discount applied!');
     } else {
       // Check if it matches an existing customer's referral code (case-insensitive)
       const matchingCustomer = customers.find(c => c.referralCode && c.referralCode.toUpperCase() === code);
@@ -257,9 +275,17 @@ export default function CartDrawer({
                       </div>
                     )}
 
+                    {totalBeforeShipping < 40 && (
+                      <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-2 text-[11px] text-indigo-700 text-center font-bold">
+                        🚚 Add <span className="font-extrabold">£{(40 - totalBeforeShipping).toFixed(2)}</span> more to qualify for <span className="underline">FREE Delivery</span>!
+                      </div>
+                    )}
+
                     <div className="flex justify-between text-slate-500">
                       <span>Delivery fee</span>
-                      <span className="text-emerald-600 font-bold">FREE over £40</span>
+                      <span className={shippingFee === 0 ? "text-emerald-600 font-extrabold" : "font-extrabold text-slate-800"}>
+                        {shippingFee === 0 ? 'FREE' : '£2.99'}
+                      </span>
                     </div>
 
                     <div className="flex justify-between text-slate-800 text-sm font-extrabold pt-2 border-t border-slate-200">

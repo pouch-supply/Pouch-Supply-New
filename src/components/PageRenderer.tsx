@@ -1567,11 +1567,13 @@ export default function PageRenderer({
                     if (!url) return '';
                     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
                     const match = url.match(regExp);
-                    return (match && match[2].length === 11) ? match[2] : url;
+                    return (match && match[2] && match[2].length === 11) ? match[2] : '';
                   };
 
-                  const ytId = getYouTubeId(sec.settings.videoUrl || '');
-                  const videoSource = sec.settings.videoMp4Url || 'https://assets.mixkit.co/videos/preview/mixkit-laboratory-test-tubes-40436-large.mp4';
+                  const rawYouTubeUrl = sec.settings.videoUrl || '';
+                  const ytId = getYouTubeId(rawYouTubeUrl);
+                  const rawMp4 = sec.settings.videoMp4Url || (rawYouTubeUrl && !ytId ? rawYouTubeUrl : '');
+                  const videoSource = rawMp4 || 'https://assets.mixkit.co/videos/preview/mixkit-laboratory-test-tubes-40436-large.mp4';
                   const hasVideo = !!(ytId || videoSource);
                   const bgImage = '/src/assets/images/nicotine_pouches_hero_1784094944394.jpg';
 

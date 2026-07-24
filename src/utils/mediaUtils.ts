@@ -4,6 +4,7 @@ export function cleanMediaUrl(url?: string): string {
   if (!url) return '';
   if (typeof url !== 'string') return '';
   let trimmed = url.trim();
+  if (trimmed.startsWith('data:')) return trimmed;
   if (trimmed.includes('/uploads/') || trimmed.includes('/api/images/')) {
     trimmed = trimmed.replace(/^https?:\/\/[^/]+(\/(?:uploads|api\/images)\/.+)$/, '$1');
   }

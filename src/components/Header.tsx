@@ -68,7 +68,7 @@ export default function Header({
       {/* Top micro promo bar */}
       <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white text-[10px] text-center py-2 px-4 uppercase tracking-widest font-extrabold flex items-center justify-center gap-1.5 shadow-inner">
         <Sparkles className="h-3 w-3 text-amber-400 animate-pulse" />
-        <span className="tracking-widest">Free Priority Courier Shipping on all bulk orders over £40! Delivery within 2-4 working days</span>
+        <span className="tracking-widest">Free Shipping on all orders over £40! Standard Delivery £2.99 for orders under £40</span>
       </div>
 
       {/* Slide-down Search Overlay */}

@@ -1722,13 +1722,37 @@ export default function AdminDashboard({
 
   const handleExportPages = () => {
     try {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customPages, null, 2));
+      // Validate and ensure all nested sections and settings are fully formatted
+      const pagesToExport = (localPages || customPages || []).map(page => ({
+        ...page,
+        sections: (page.sections || []).map(section => ({
+          ...section,
+          settings: { ...(section.settings || {}) }
+        }))
+      }));
+
+      // Direct download of backup JSON
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(pagesToExport, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", `pouch_supply_pages_backup_${Date.now()}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
+
+      // Persist to localStorage and MongoDB to guarantee safety
+      try {
+        localStorage.setItem('ps_custom_pages', JSON.stringify(pagesToExport));
+      } catch (e) {
+        console.warn('LocalStorage backup failed:', e);
+      }
+
+      fetch('/api/custompages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pagesToExport)
+      }).catch(err => console.error('[Export Safety Sync] POST failed:', err));
+
     } catch (e: any) {
       console.error("Export failed:", e);
       alert("Failed to export pages: " + e.message);
@@ -1751,19 +1775,38 @@ export default function AdminDashboard({
         }
 
         triggerConfirm(`Do you want to MERGE these ${importedList.length} custom pages with your existing pages?`, () => {
-          const existingIds = new Set(customPages.map(p => p.id));
-          const merged = [...customPages];
+          const existingIds = new Set(localPages.map(p => p.id));
+          const merged = [...localPages];
           importedList.forEach(item => {
-            if (item && item.id) {
-              if (existingIds.has(item.id)) {
-                const idx = merged.findIndex(p => p.id === item.id);
-                if (idx !== -1) merged[idx] = item;
+            if (item && (item.id || item.slug)) {
+              const targetId = item.id || item.slug;
+              const idx = merged.findIndex(p => p.id === targetId || p.slug === item.slug);
+              if (idx !== -1) {
+                // Ensure sections from imported item or existing item are preserved
+                const existingSections = merged[idx].sections || [];
+                const importedSections = item.sections || [];
+                const finalSections = importedSections.length > 0 ? importedSections : existingSections;
+                merged[idx] = { ...item, sections: finalSections };
               } else {
                 merged.push(item);
               }
             }
           });
-          onUpdateCustomPages(merged);
+
+          setLocalPages(merged);
+          parentOnUpdateCustomPages(merged);
+
+          try {
+            localStorage.setItem('ps_custom_pages', JSON.stringify(merged));
+          } catch (err) {}
+
+          fetch('/api/custompages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(merged)
+          }).catch(err => console.error('[Import Safety Sync] POST failed:', err));
+
+          alert(`Successfully imported and merged ${importedList.length} pages into MongoDB and local storage!`);
         }, "Import Pages Backup");
 
       } catch (err: any) {
