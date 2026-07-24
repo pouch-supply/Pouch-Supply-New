@@ -364,12 +364,57 @@ export default function App() {
           loadedDiscountsSuccess.current = true;
         }
         if (Array.isArray(pagesRes) && pagesRes.length > 0) {
-          let finalPages = pagesRes;
-          if (!finalPages.some((p: any) => p && p.isHomepage)) {
-            const defaultHome = DEFAULT_PAGES.find((p: any) => p.isHomepage);
-            if (defaultHome) finalPages = [defaultHome, ...finalPages];
-          }
-          setCustomPages(finalPages);
+          setCustomPages(prevLocalPages => {
+            const localMap = new Map(prevLocalPages.map(p => [p.id, p]));
+            
+            const mergedPages = pagesRes.map((serverPage: CustomPage) => {
+              const localPage = localMap.get(serverPage.id) || prevLocalPages.find(p => p.slug === serverPage.slug);
+              
+              const serverHasSections = Array.isArray(serverPage.sections) && serverPage.sections.length > 0;
+              const localHasSections = localPage && Array.isArray(localPage.sections) && localPage.sections.length > 0;
+              
+              let finalSections = serverPage.sections || [];
+              if (!serverHasSections && localHasSections) {
+                console.warn(`[Page Sync] Server page ${serverPage.title} (${serverPage.id}) had empty sections. Preserving local sections (${localPage.sections.length} sections).`);
+                finalSections = localPage.sections;
+              } else if (!serverHasSections && !localHasSections) {
+                const defaultPage = DEFAULT_PAGES.find(dp => dp.id === serverPage.id || dp.slug === serverPage.slug);
+                if (defaultPage && defaultPage.sections) {
+                  finalSections = defaultPage.sections;
+                }
+              }
+              
+              return {
+                ...serverPage,
+                sections: finalSections
+              };
+            });
+
+            // Keep local pages created on client that aren't on server yet
+            const serverIdSet = new Set(pagesRes.map((p: any) => p.id));
+            const missingLocalPages = prevLocalPages.filter(lp => lp && lp.id && !serverIdSet.has(lp.id));
+
+            let combined = [...mergedPages, ...missingLocalPages];
+
+            // Ensure homepage, subscribe, brands exist
+            if (!combined.some(p => p && p.isHomepage)) {
+              const defaultHome = DEFAULT_PAGES.find(p => p.isHomepage);
+              if (defaultHome) combined = [defaultHome, ...combined];
+            }
+            if (!combined.some(p => p && p.slug === 'subscribe')) {
+              const defaultSub = DEFAULT_PAGES.find(p => p.slug === 'subscribe');
+              if (defaultSub) combined = [...combined, defaultSub];
+            }
+            if (!combined.some(p => p && p.slug === 'brands')) {
+              const defaultBrands = DEFAULT_PAGES.find(p => p.slug === 'brands');
+              if (defaultBrands) combined = [...combined, defaultBrands];
+            }
+
+            // Sync back merged clean pages to server
+            syncToApi('custompages', combined);
+
+            return combined;
+          });
           loadedPagesSuccess.current = true;
         }
         if (Array.isArray(blogsRes) && blogsRes.length > 0) {

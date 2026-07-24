@@ -265,6 +265,23 @@ export async function fetchResource(resource: string): Promise<any[]> {
         return cleanDoc;
       });
 
+      // For customPages, ensure sections array is preserved from defaults or memoryCache if DB doc returned empty
+      if (normResource === 'customPages') {
+        cleanDocs = cleanDocs.map((doc: any) => {
+          if (!doc.sections || !Array.isArray(doc.sections) || doc.sections.length === 0) {
+            const cachedPage = (memoryCache['customPages'] || []).find((cp: any) => cp.id === doc.id || cp.slug === doc.slug);
+            const defaultPage = DEFAULT_PAGES.find(dp => dp.id === doc.id || dp.slug === doc.slug);
+            const sectionsToUse = (cachedPage && Array.isArray(cachedPage.sections) && cachedPage.sections.length > 0)
+              ? cachedPage.sections
+              : (defaultPage?.sections || []);
+            if (sectionsToUse.length > 0) {
+              return { ...doc, sections: sectionsToUse };
+            }
+          }
+          return doc;
+        });
+      }
+
       memoryCache[normResource] = cleanDocs;
       if (normResource !== resource) memoryCache[resource] = cleanDocs;
       persistMemoryCacheToBackup();
@@ -286,6 +303,24 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
     return memoryCache[normResource] || [];
   }
 
+  // Sanitize customPages to restore sections from cache if payload arrives with missing/empty sections
+  if (normResource === 'customPages') {
+    list = list.map(item => {
+      if (item && (!item.sections || !Array.isArray(item.sections) || item.sections.length === 0)) {
+        const cached = (memoryCache['customPages'] || []).find((p: any) => p.id === item.id || p.slug === item.slug);
+        const defaultPage = DEFAULT_PAGES.find(dp => dp.id === item.id || dp.slug === item.slug);
+        const fallbackSections = (cached && Array.isArray(cached.sections) && cached.sections.length > 0)
+          ? cached.sections
+          : (defaultPage?.sections || []);
+        if (fallbackSections.length > 0) {
+          console.warn(`[saveResource] Page ${item.title} (${item.id}) received empty sections. Restoring ${fallbackSections.length} sections from fallback cache.`);
+          return { ...item, sections: fallbackSections };
+        }
+      }
+      return item;
+    });
+  }
+
   // Synchronously update local fallback cache and persist backup
   memoryCache[normResource] = [...list];
   if (normResource !== resource) {
@@ -298,30 +333,25 @@ export async function saveResource(resource: string, list: any[]): Promise<any[]
     const Model = getModelForResource(normResource) as any;
     if (conn && Model) {
       const activeIds = list.map(item => item.id).filter(Boolean);
-      const activeSlugs = list.map(item => item.slug).filter(Boolean);
-      const allActiveKeys = Array.from(new Set([...activeIds, ...activeSlugs]));
       
-      console.log(`[saveResource] Syncing ${normResource} collection. Total items in payload: ${list.length}. Active keys:`, allActiveKeys);
+      console.log(`[saveResource] Syncing ${normResource} collection. Total items in payload: ${list.length}. Active IDs:`, activeIds);
       
       // Delete items no longer in active list from MongoDB
-      const deleteResult = await Model.deleteMany({
-        $and: [
-          { id: { $nin: allActiveKeys } },
-          { slug: { $nin: allActiveKeys } }
-        ]
-      });
-      if (deleteResult.deletedCount > 0) {
-        console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${normResource} not in active client list.`);
+      if (activeIds.length > 0) {
+        const deleteResult = await Model.deleteMany({ id: { $nin: activeIds } });
+        if (deleteResult.deletedCount > 0) {
+          console.log(`[saveResource] Permanently deleted ${deleteResult.deletedCount} items from ${normResource} not in active client list.`);
+        }
       }
       
-      // Upsert current items using replaceOne
+      // Upsert current items using replaceOne strictly by id to avoid cross-matching empty slug values
       for (const item of list) {
         if (!item) continue;
-        const key = item.id || item.slug;
-        if (!key) continue;
+        const id = item.id || item.slug;
+        if (!id) continue;
         const { _id, __v, ...cleanItem } = item;
-        cleanItem.id = cleanItem.id || key;
-        await Model.replaceOne({ $or: [{ id: key }, { slug: key }] }, cleanItem, { upsert: true });
+        cleanItem.id = cleanItem.id || id;
+        await Model.replaceOne({ id: cleanItem.id }, cleanItem, { upsert: true });
       }
       console.log(`[saveResource] Successfully upserted and synchronized all ${list.length} items to ${normResource} collection.`);
       return list;

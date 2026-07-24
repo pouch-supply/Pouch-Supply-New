@@ -1052,17 +1052,49 @@ export default function AdminDashboard({
     setIsSaving(true);
     setShowSaveSuccess(false);
 
-    // Simulate saving process for realistic high-quality feedback
-    setTimeout(() => {
-      parentOnUpdateProducts(localProducts);
-      parentOnUpdateCollections(localCollections);
-      parentOnUpdateCustomPages(localPages);
-      parentOnUpdateDiscounts(localDiscounts);
-      parentOnUpdateOrders(localOrders);
-      parentOnUpdateFiles(localFiles);
-      parentOnUpdateCustomers(localCustomers);
-      parentOnUpdateBlogs(localBlogs);
+    // Guarantee full page section settings payload
+    const pagesToSave = localPages.map(page => ({
+      ...page,
+      sections: (page.sections || []).map(section => ({
+        ...section,
+        settings: {
+          ...(section.settings || {})
+        }
+      }))
+    }));
 
+    // Update parent states
+    parentOnUpdateProducts(localProducts);
+    parentOnUpdateCollections(localCollections);
+    parentOnUpdateCustomPages(pagesToSave);
+    parentOnUpdateDiscounts(localDiscounts);
+    parentOnUpdateOrders(localOrders);
+    parentOnUpdateFiles(localFiles);
+    parentOnUpdateCustomers(localCustomers);
+    parentOnUpdateBlogs(localBlogs);
+
+    // Save directly to localStorage as backup
+    try {
+      localStorage.setItem('ps_custom_pages', JSON.stringify(pagesToSave));
+      localStorage.setItem('ps_products', JSON.stringify(localProducts));
+      localStorage.setItem('ps_collections', JSON.stringify(localCollections));
+      localStorage.setItem('ps_orders', JSON.stringify(localOrders));
+      localStorage.setItem('ps_files', JSON.stringify(localFiles));
+      localStorage.setItem('ps_customers', JSON.stringify(localCustomers));
+      localStorage.setItem('ps_discounts', JSON.stringify(localDiscounts));
+      localStorage.setItem('ps_blogs', JSON.stringify(localBlogs));
+    } catch (e) {
+      console.warn('[Admin Save] LocalStorage write warn:', e);
+    }
+
+    // Direct HTTP POST to API endpoints for instant database persistence
+    fetch('/api/custompages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pagesToSave)
+    }).catch(err => console.error('[Admin Save] Direct POST custompages failed:', err));
+
+    setTimeout(() => {
       setHasUnsavedChanges(false);
       setIsSaving(false);
       setShowSaveSuccess(true);
@@ -1070,11 +1102,10 @@ export default function AdminDashboard({
       if (onDirtyChange) onDirtyChange(false);
       if (onAdminActionComplete) onAdminActionComplete('save');
 
-      // Hide the success toast after 3.5 seconds
       setTimeout(() => {
         setShowSaveSuccess(false);
       }, 3500);
-    }, 850);
+    }, 450);
   };
 
   const handleGlobalDiscard = () => {

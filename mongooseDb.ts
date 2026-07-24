@@ -106,8 +106,20 @@ const DiscountSchema = new Schema({
   id: { type: String, required: true, unique: true }
 }, { strict: false, timestamps: true });
 
+const SectionSchema = new Schema({
+  id: { type: String, required: true },
+  type: { type: String, required: true },
+  settings: { type: Schema.Types.Mixed, default: {} }
+}, { _id: false, strict: false });
+
 const CustomPageSchema = new Schema({
-  id: { type: String, required: true, unique: true }
+  id: { type: String, required: true, unique: true },
+  title: { type: String },
+  slug: { type: String },
+  visibility: { type: String },
+  updatedAt: { type: String },
+  isHomepage: { type: Boolean },
+  sections: { type: [SectionSchema], default: [] }
 }, { strict: false, timestamps: true });
 
 const BlogSchema = new Schema({
