@@ -168,7 +168,6 @@ function BrandsWeOfferSectionAdmin({ sec }: BrandsWeOfferSectionAdminProps) {
       </div>
 
       <div className="relative px-8">
-        {/* Left Arrow Button */}
         {items.length > 0 && (
           <button 
             type="button"
@@ -179,7 +178,6 @@ function BrandsWeOfferSectionAdmin({ sec }: BrandsWeOfferSectionAdminProps) {
           </button>
         )}
 
-        {/* Brand Slider Container */}
         <div 
           ref={sliderRef}
           onScroll={handleScroll}
@@ -211,7 +209,6 @@ function BrandsWeOfferSectionAdmin({ sec }: BrandsWeOfferSectionAdminProps) {
           )}
         </div>
 
-        {/* Right Arrow Button */}
         {items.length > 0 && (
           <button 
             type="button"
@@ -223,7 +220,6 @@ function BrandsWeOfferSectionAdmin({ sec }: BrandsWeOfferSectionAdminProps) {
         )}
       </div>
 
-      {/* Dot Indicators */}
       {items.length > 1 && (
         <div className="flex justify-center items-center gap-1.5 mt-4">
           {Array.from({ length: Math.min(items.length, 6) }).map((_, dIdx) => (
@@ -273,7 +269,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
       return (
         <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100 flex flex-col items-center my-4">
           <div className="grid grid-cols-4 gap-1 w-full">
-            {/* LITE */}
             <div className="bg-white rounded-lg border border-slate-200/60 p-1 flex flex-col items-center justify-between text-center shadow-2xs h-24">
               <span className="text-[6px] font-black tracking-wider text-slate-400">LITE</span>
               <div className="my-0.5 text-center">
@@ -283,7 +278,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
               </div>
             </div>
             
-            {/* CORE */}
             <div className="bg-white rounded-lg border border-slate-200/60 p-1 flex flex-col items-center justify-between text-center shadow-2xs h-24">
               <span className="text-[6px] font-black tracking-wider text-slate-450">CORE</span>
               <div className="my-0.5 text-center">
@@ -293,7 +287,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
               </div>
             </div>
 
-            {/* PRO */}
             <div className="bg-[#0C1017] rounded-lg border border-[#D4AF37] p-1 flex flex-col items-center justify-between text-center shadow-sm h-24 relative overflow-hidden transform scale-105 z-10">
               <div className="absolute top-0 left-0 right-0 bg-[#D4AF37] text-[4px] font-black text-slate-950 py-0.5 uppercase tracking-wider text-center">
                 MOST POPULAR
@@ -306,7 +299,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
               </div>
             </div>
 
-            {/* ULTIMATE */}
             <div className="bg-white rounded-lg border border-[#D4AF37]/50 p-1 flex flex-col items-center justify-between text-center shadow-2xs h-24">
               <span className="text-[6px] font-black tracking-wider text-slate-450">ULTIMATE</span>
               <div className="my-0.5 text-center">
@@ -324,21 +316,18 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
       return (
         <div className="w-full h-32 relative my-4 flex items-center justify-center overflow-hidden">
           <div className="relative w-full max-w-[200px] h-full flex items-center justify-center">
-            {/* CAN 1: ZYN */}
             <div className="absolute left-1 top-2 w-[48px] h-[48px] rounded-full bg-white border border-slate-200 shadow-md flex flex-col items-center justify-center p-0.5 transform -rotate-12 z-10">
               <div className="w-[42px] h-[42px] rounded-full border border-sky-400/30 flex flex-col items-center justify-center bg-sky-50/20">
                 <span className="text-[7px] font-extrabold text-sky-600 tracking-tight leading-none">ZYN</span>
               </div>
             </div>
 
-            {/* CAN 2: VELO */}
             <div className="absolute right-1 top-2 w-[48px] h-[48px] rounded-full bg-white border border-slate-200 shadow-md flex flex-col items-center justify-center p-0.5 transform rotate-12 z-10">
               <div className="w-[42px] h-[42px] rounded-full border border-blue-500/30 flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600">
                 <span className="text-[7px] font-extrabold text-white tracking-tight leading-none">VELO</span>
               </div>
             </div>
 
-            {/* CAN 5: 77 */}
             <div className="absolute left-[50%] top-1 w-[52px] h-[52px] rounded-full bg-white border border-slate-200 shadow-lg flex flex-col items-center justify-center p-0.5 transform -translate-x-1/2 -rotate-3 z-30">
               <div className="w-[46px] h-[46px] rounded-full border border-slate-900 flex flex-col items-center justify-center bg-[#0C1017]">
                 <span className="text-[10px] font-black text-white tracking-tighter leading-none">77</span>
@@ -408,7 +397,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
       style={{ backgroundColor: sec.settings.backgroundColor || '#F8FAFC' }}
     >
       <div className="max-w-7xl mx-auto px-4 space-y-10 relative">
-        {/* Section Header */}
         <div className="text-center space-y-3 max-w-3xl mx-auto flex flex-col items-center">
           <div className="flex items-center justify-center gap-3">
             <div className="w-8 h-[1px] bg-[#D4AF37]" />
@@ -431,16 +419,13 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
             </p>
           )}
 
-          {/* Reassuring timing badge */}
           <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50/75 border border-amber-100 text-[#D4AF37] text-[10px] font-black">
             <Clock className="h-3 w-3 stroke-[2.5]" />
             <span>Takes less than 60 seconds</span>
           </div>
         </div>
 
-        {/* Steps Grid */}
         <div className="relative max-w-6xl mx-auto pt-4">
-          {/* Gold Connecting Dotted Line */}
           <div className="absolute top-[140px] left-[15%] right-[15%] h-[2px] border-t-2 border-dashed border-[#D4AF37]/45 hidden md:block z-0" />
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
@@ -449,7 +434,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
                 key={sidx}
                 className="bg-white rounded-[20px] border border-slate-100 p-6 flex flex-col items-center justify-between text-center shadow-[0_10px_30px_rgba(147,197,253,0.08)] min-h-[360px] group relative"
               >
-                {/* Gold step circle overlapping border */}
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#D4AF37] text-white font-black text-xs flex items-center justify-center shadow-md border-2 border-white">
                   {step.number || (sidx + 1)}
                 </div>
@@ -463,21 +447,17 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
                     {step.description || 'Step description details.'}
                   </p>
 
-                  {/* Render High-Fidelity Custom Visual Mockups */}
                   {renderStepVisualMockup(sidx, step)}
                 </div>
 
-                {/* Render corresponding green checkmarks */}
                 {renderStepCheckmarks(sidx)}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Reassurance Objections Grid */}
         <div className="max-w-6xl mx-auto pt-2">
           <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-[0_10px_30px_rgba(147,197,253,0.03)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 divide-y sm:divide-y-0 lg:divide-y-0 lg:divide-x divide-slate-100">
-            {/* CANCEL ANYTIME */}
             <div className="flex items-center gap-3 py-2 justify-center lg:justify-start">
               <div className="shrink-0 p-2 rounded-lg bg-slate-50 flex items-center justify-center text-slate-800">
                 <ShieldCheck className="h-5 w-5 text-slate-800" />
@@ -492,7 +472,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
               </div>
             </div>
 
-            {/* CHANGE ANYTIME */}
             <div className="flex items-center gap-3 py-2 justify-center lg:justify-start">
               <div className="shrink-0 p-2 rounded-lg bg-slate-50 flex items-center justify-center text-slate-850">
                 <RefreshCw className="h-5 w-5 text-slate-850 animate-spin" style={{ animationDuration: '8s' }} />
@@ -507,7 +486,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
               </div>
             </div>
 
-            {/* SKIP DELIVERIES */}
             <div className="flex items-center gap-3 py-2 justify-center lg:justify-start">
               <div className="shrink-0 p-2 rounded-lg bg-slate-50 flex items-center justify-center text-slate-800">
                 <Truck className="h-5 w-5 text-slate-800" />
@@ -522,7 +500,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
               </div>
             </div>
 
-            {/* NO CONTRACTS */}
             <div className="flex items-center gap-3 py-2 justify-center lg:justify-start">
               <div className="shrink-0 p-2 rounded-lg bg-slate-50 flex items-center justify-center text-slate-800">
                 <Lock className="h-5 w-5 text-slate-800" />
@@ -539,7 +516,6 @@ function HowItWorksSectionAdmin({ sec }: HowItWorksSectionAdminProps) {
           </div>
         </div>
 
-        {/* Bottom Conversion Area */}
         <div className="mt-8 flex flex-col items-center justify-center space-y-3 text-center pb-4">
           <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Ready to get started?</h4>
           <button
@@ -625,7 +601,6 @@ export default function AdminDashboard({
 
   const [activeTab, setActiveTab] = useState<SidebarTab>(getInitialTab);
 
-  // Sync state to URL
   useEffect(() => {
     try {
       const path = window.location.pathname;
@@ -639,7 +614,6 @@ export default function AdminDashboard({
     }
   }, [activeTab]);
 
-  // Sync URL to state (Popstate for back/forward support)
   useEffect(() => {
     const handlePopState = () => {
       try {
@@ -669,13 +643,11 @@ export default function AdminDashboard({
     uriHost?: string;
   } | null>(null);
 
-  // MongoDB details modal state
   const [showDbDetailsModal, setShowDbDetailsModal] = useState(false);
   const [dbDetailsLoading, setDbDetailsLoading] = useState(false);
   const [dbDetailsData, setDbDetailsData] = useState<any | null>(null);
   const [dbDetailsError, setDbDetailsError] = useState<string | null>(null);
 
-  // Custom confirmation dialog state to replace blocked window.confirm in sandboxed iframe
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -990,6 +962,61 @@ export default function AdminDashboard({
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
+  // ============================================================
+  // CRITICAL FIX: PERSIST CUSTOM PAGES TO DATABASE IMMEDIATELY
+  // ============================================================
+  
+  // Helper function to save pages to MongoDB via API
+  const savePagesToDatabase = async (pages: CustomPage[]) => {
+    try {
+      const response = await fetch('/api/custompages/batch-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pages })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to save pages to database:', errorData);
+        return false;
+      }
+      
+      console.log('✅ Pages saved successfully to MongoDB');
+      return true;
+    } catch (error) {
+      console.error('Error saving pages to database:', error);
+      return false;
+    }
+  };
+
+  // Helper function to load pages from MongoDB
+  const loadPagesFromDatabase = async () => {
+    try {
+      const response = await fetch('/api/custompages');
+      if (response.ok) {
+        const pages = await response.json();
+        if (pages && pages.length > 0) {
+          setLocalPages(pages);
+          parentOnUpdateCustomPages(pages);
+          return pages;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading pages from database:', error);
+      return null;
+    }
+  };
+
+  // Load pages from database on component mount
+  useEffect(() => {
+    // Only load if we have parent pages but they might be empty
+    // and we want to ensure we have the latest from the database
+    if (parentCustomPages.length === 0) {
+      loadPagesFromDatabase();
+    }
+  }, []);
+
   // Sync edits wrapper overrides so existing handlers automatically write to drafts and sync to the parent App context immediately
   const onUpdateProducts = (updatedProds: Product[]) => {
     setLocalProducts(updatedProds);
@@ -1005,11 +1032,17 @@ export default function AdminDashboard({
     if (onDirtyChange) onDirtyChange(false);
   };
 
+  // ============================================================
+  // FIXED: Custom Pages handler with immediate database persistence
+  // ============================================================
   const onUpdateCustomPages = (updatedPages: CustomPage[]) => {
     setLocalPages(updatedPages);
     parentOnUpdateCustomPages(updatedPages);
-    setHasUnsavedChanges(false);
-    if (onDirtyChange) onDirtyChange(false);
+    setHasUnsavedChanges(true);
+    if (onDirtyChange) onDirtyChange(true);
+    
+    // IMMEDIATE DATABASE PERSISTENCE - CRITICAL FIX
+    savePagesToDatabase(updatedPages);
   };
 
   const onUpdateDiscounts = (updatedDiscs: Discount[]) => {
@@ -1052,8 +1085,8 @@ export default function AdminDashboard({
     setIsSaving(true);
     setShowSaveSuccess(false);
 
-    // Simulate saving process for realistic high-quality feedback
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Save all data to parent state
       parentOnUpdateProducts(localProducts);
       parentOnUpdateCollections(localCollections);
       parentOnUpdateCustomPages(localPages);
@@ -1063,6 +1096,9 @@ export default function AdminDashboard({
       parentOnUpdateCustomers(localCustomers);
       parentOnUpdateBlogs(localBlogs);
 
+      // CRITICAL: Save pages to database explicitly
+      await savePagesToDatabase(localPages);
+
       setHasUnsavedChanges(false);
       setIsSaving(false);
       setShowSaveSuccess(true);
@@ -1070,7 +1106,6 @@ export default function AdminDashboard({
       if (onDirtyChange) onDirtyChange(false);
       if (onAdminActionComplete) onAdminActionComplete('save');
 
-      // Hide the success toast after 3.5 seconds
       setTimeout(() => {
         setShowSaveSuccess(false);
       }, 3500);
@@ -1092,7 +1127,7 @@ export default function AdminDashboard({
     if (onAdminActionComplete) onAdminActionComplete('discard');
   };
 
-  // Sync files state unconditionally so uploads instantly appear in the File Manager bypassing draft locks
+  // Sync files state unconditionally so uploads instantly appear in the File Manager
   React.useEffect(() => {
     setLocalFiles(parentFiles);
   }, [parentFiles]);
@@ -1110,7 +1145,7 @@ export default function AdminDashboard({
     }
   }, [parentProducts, parentCollections, parentCustomPages, parentDiscounts, parentOrders, parentCustomers, parentBlogs, hasUnsavedChanges]);
 
-  // Listen to external modal command requests (from App.tsx confirm triggers)
+  // Listen to external modal command requests
   React.useEffect(() => {
     if (adminActionTrigger) {
       if (adminActionTrigger.action === 'save') {
@@ -1120,6 +1155,36 @@ export default function AdminDashboard({
       }
     }
   }, [adminActionTrigger]);
+
+  // ============================================================
+  // AUTO-SAVE EVERY 30 SECONDS - CRITICAL FOR DATA SAFETY
+  // ============================================================
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (hasUnsavedChanges && selectedBuilderPageId) {
+        console.log('🔄 Auto-saving pages...');
+        // Save just the pages to database
+        savePagesToDatabase(localPages);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [hasUnsavedChanges, selectedBuilderPageId, localPages]);
+
+  // ============================================================
+  // BEFORE-UNLOAD WARNING - PREVENT DATA LOSS
+  // ============================================================
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Expose standard namespace variables to keep all existing loops intact
   const products = localProducts;
@@ -1187,9 +1252,9 @@ export default function AdminDashboard({
       .toString()
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-')           // Replace spaces with -
-      .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-      .replace(/\-\-+/g, '-');        // Replace multiple - with single -
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-');
   };
 
   // Pages management handlers
@@ -1214,7 +1279,8 @@ export default function AdminDashboard({
     };
     const updated = [...localPages, duplicated];
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
   };
 
   const handleSetPageAsHomepage = (id: string) => {
@@ -1225,7 +1291,8 @@ export default function AdminDashboard({
       return { ...p, isHomepage: false };
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
   };
 
   const handlePreviewPage = (page: CustomPage) => {
@@ -1260,14 +1327,11 @@ export default function AdminDashboard({
     const productsInDraft = products.filter(p => p.status === 'Draft').length;
     const lowStockCount = products.filter(p => p.status === 'Active' && p.inventory <= 15).length;
     
-    // 1. Calculate dynamic conversion rate based on visits vs checkouts.
     const totalStoreSessions = completedOrders * 12 + 150;
     const conversionRate = totalStoreSessions > 0 ? (completedOrders / totalStoreSessions) * 100 : 0;
 
-    // Calculate today's sales
     const todaySales = orders.filter(o => o.date && o.date.startsWith('Today')).reduce((sum, o) => sum + o.total, 0);
 
-    // 2. Geographic breakdown derived from real order destinations or real customer locations!
     const geoCounts: Record<string, number> = {};
     const locationsToCount = orders.map(o => o.destination).concat(customers.map(c => c.location));
     locationsToCount.forEach(loc => {
@@ -1305,7 +1369,6 @@ export default function AdminDashboard({
       finalGeos.sort((a, b) => b.sessionCount - a.sessionCount);
     }
 
-    // 3. Dynamic Revenue Trend Graph
     const sortedOrders = [...orders].reverse();
     let pathD = "M 0 95 Q 20 60 40 40 T 80 15 T 100 2";
     let graphPoints: { x: number; y: number; label: string; value: number }[] = [];
@@ -1400,7 +1463,6 @@ export default function AdminDashboard({
       onUpdateProducts([item, ...products]);
     }
 
-    // Reset forms
     setShowAddProduct(false);
     setNewProductForm({
       title: '', description: '', price: 4.99, compareAtPrice: 5.99,
@@ -1444,14 +1506,12 @@ export default function AdminDashboard({
       const updated = products.filter(p => p.id !== pId);
       onUpdateProducts(updated);
 
-      // Clean up collection references
       const updatedColls = collections.map(c => ({
         ...c,
         productIds: c.productIds.filter(id => id !== pId)
       }));
       onUpdateCollections(updatedColls);
 
-      // Remove from selected list
       setSelectedProductIds(prev => prev.filter(id => id !== pId));
     }, "Delete Product");
   };
@@ -1482,7 +1542,6 @@ export default function AdminDashboard({
       const updated = products.filter(p => !selectedProductIds.includes(p.id));
       onUpdateProducts(updated);
 
-      // Clean up collection references
       const updatedColls = collections.map(c => ({
         ...c,
         productIds: c.productIds.filter(id => !selectedProductIds.includes(id))
@@ -1611,7 +1670,7 @@ export default function AdminDashboard({
           throw new Error("No products could be parsed from the file.");
         }
 
-        triggerConfirm(`Do you want to MERGE these ${importedList.length} products with your existing catalog? (Clicking 'OK' merges them. To replace your entire catalog, click cancel first and empty your catalog, or contact support.)`, () => {
+        triggerConfirm(`Do you want to MERGE these ${importedList.length} products with your existing catalog?`, () => {
           const existingIds = new Set(products.map(p => p.id));
           const merged = [...products];
           importedList.forEach(item => {
@@ -1733,6 +1792,7 @@ export default function AdminDashboard({
             }
           });
           onUpdateCustomPages(merged);
+          savePagesToDatabase(merged);
         }, "Import Pages Backup");
 
       } catch (err: any) {
@@ -2147,7 +2207,8 @@ export default function AdminDashboard({
 
     const updatedPages = [...localPages, page];
     setLocalPages(updatedPages);
-    onUpdateCustomPages(updatedPages);
+    parentOnUpdateCustomPages(updatedPages);
+    savePagesToDatabase(updatedPages);
     setShowAddPage(false);
     setNewPageForm({ title: '', slug: '' });
   };
@@ -2159,7 +2220,6 @@ export default function AdminDashboard({
   const handleAddSectionToPage = (sectionType: PageSection['type']) => {
     if (!selectedBuilderPageId) return;
     
-    // Banner, Slideshow and Marquee text should be full width by default!
     const isFullWidthByDefault = sectionType === 'Image banner' || sectionType === 'Slideshow' || sectionType === 'Marquee text' || sectionType === 'Video banner';
     
     const newSection: PageSection = {
@@ -2202,19 +2262,19 @@ export default function AdminDashboard({
         columnsDesktop: sectionType === 'Blog post' ? 3 : undefined,
         columnsMobile: sectionType === 'Blog post' ? 1 : undefined,
         brandItems: (sectionType === 'Brand list' || sectionType === 'Brands we offer') ? [
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: '77 Nicotine' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Clew Pouches' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Cuba Black' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Maggie Original' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: '77' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Clew' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Cuba' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Maggie' },
           { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Nordic Spirit' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'XQS Sweden' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'ZYN Mint' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Pablo Strong' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Killa Double' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Fumi Fresh' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Velo Active' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'XQS' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'ZYN' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Pablo' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Killa' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Fumi' },
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Velo' },
           { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'White Fox' },
-          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Snü Fruity' }
+          { imageUrl: PLACEHOLDER_IMAGE, linkUrl: 'frontend-shop', title: 'Snü' }
         ] : undefined,
         buttonText: (sectionType === 'Image banner' || sectionType === 'Image with text' || sectionType === 'Rich text' || sectionType === 'Video banner') ? 'Purchase Packs' : undefined,
         buttonLink: (sectionType === 'Image banner' || sectionType === 'Image with text' || sectionType === 'Rich text' || sectionType === 'Video banner') ? 'frontend-shop' : undefined,
@@ -2327,7 +2387,8 @@ export default function AdminDashboard({
       return page;
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
     setHasUnsavedChanges(true);
     setSelectedBuilderSectionId(newSection.id);
   };
@@ -2344,13 +2405,17 @@ export default function AdminDashboard({
       return page;
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
     setHasUnsavedChanges(true);
     if (selectedBuilderSectionId === sectionId) {
       setSelectedBuilderSectionId(null);
     }
   };
 
+  // ============================================================
+  // FIXED: Section settings update with immediate database save
+  // ============================================================
   const handleUpdateSectionSettings = (settingsKey: string, val: any) => {
     if (!selectedBuilderPageId || !selectedBuilderSectionId) return;
     const updated = localPages.map(page => {
@@ -2374,7 +2439,8 @@ export default function AdminDashboard({
       return page;
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
     setHasUnsavedChanges(true);
   };
 
@@ -2394,7 +2460,8 @@ export default function AdminDashboard({
       return p;
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
     setHasUnsavedChanges(true);
     if (onDirtyChange) onDirtyChange(true);
   };
@@ -2408,7 +2475,6 @@ export default function AdminDashboard({
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= sections.length) return;
 
-    // Swap
     const temp = sections[idx];
     sections[idx] = sections[targetIdx];
     sections[targetIdx] = temp;
@@ -2420,7 +2486,8 @@ export default function AdminDashboard({
       return p;
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
     setHasUnsavedChanges(true);
   };
 
@@ -2442,7 +2509,8 @@ export default function AdminDashboard({
       return p;
     });
     setLocalPages(updated);
-    onUpdateCustomPages(updated);
+    parentOnUpdateCustomPages(updated);
+    savePagesToDatabase(updated);
     setHasUnsavedChanges(true);
     if (onDirtyChange) onDirtyChange(true);
   };
@@ -3169,7 +3237,6 @@ export default function AdminDashboard({
                   <div className="relative z-10 w-full flex justify-between px-6 text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-none pt-4">
                     {stats.graphPoints.length > 0 ? (
                       stats.graphPoints.map((gp, gIdx) => {
-                        // Display up to 4 labels maximum to avoid clutter
                         if (
                           stats.graphPoints.length <= 4 || 
                           gIdx === 0 || 
@@ -3381,7 +3448,6 @@ export default function AdminDashboard({
                           parentOnUpdateOrders(updated);
                           setSelectedOrder({ ...selectedOrder, paymentStatus: 'Refunded' });
                           
-                          // Log refund event to simulated emails / timeline
                           const refundComment = "Order was fully refunded.";
                           setTimelineComments(prev => ({
                             ...prev,
@@ -3395,7 +3461,6 @@ export default function AdminDashboard({
                       
                       <button
                         onClick={() => {
-                          // Simple Return notification
                           const returnComment = "Customer initiated a return for items.";
                           setTimelineComments(prev => ({
                             ...prev,
@@ -3453,7 +3518,6 @@ export default function AdminDashboard({
                         <div className="flex gap-2">
                           <button
                             onClick={() => {
-                              // APPROVE WITHDRAWAL
                               const updatedTags = selectedOrder.tags.filter(t => t !== 'Withdrawal Requested' && !t.startsWith('Withdraw:'));
                               updatedTags.push('Withdrawal Approved');
                               
@@ -3468,7 +3532,6 @@ export default function AdminDashboard({
                                 return o;
                               });
 
-                              // Draft Approved email copy
                               const emailHtml = `
                                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff; color: #334155;">
                                   <div style="background-color: #10b981; padding: 25px 20px; text-align: center;">
@@ -3529,7 +3592,6 @@ export default function AdminDashboard({
                           
                           <button
                             onClick={() => {
-                              // DECLINE WITHDRAWAL
                               const updatedTags = selectedOrder.tags.filter(t => t !== 'Withdrawal Requested' && !t.startsWith('Withdraw:'));
                               updatedTags.push('Withdrawal Declined');
                               
@@ -3544,7 +3606,6 @@ export default function AdminDashboard({
                                 return o;
                               });
 
-                              // Draft Declined email copy
                               const emailHtml = `
                                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff; color: #334155;">
                                   <div style="background-color: #ef4444; padding: 25px 20px; text-align: center;">
@@ -3606,7 +3667,7 @@ export default function AdminDashboard({
                       </div>
                     )}
 
-                    {/* FULFILLMENT CARD (Identical to Shopify #1001-F1) */}
+                    {/* FULFILLMENT CARD */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                       <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
                         <div className="flex items-center gap-2">
@@ -3696,7 +3757,6 @@ export default function AdminDashboard({
                               parentOnUpdateOrders(updated);
                               setSelectedOrder({ ...selectedOrder, fulfillmentStatus: 'Delivered' });
 
-                              // Add system notification to comments
                               setTimelineComments(prev => ({
                                 ...prev,
                                 [selectedOrder.id]: [{ text: "Package status updated to: Delivered.", date: 'Just now' }, ...(prev[selectedOrder.id] || [])]
@@ -3722,7 +3782,7 @@ export default function AdminDashboard({
                       </div>
                     </div>
 
-                    {/* PAYMENT DETAILS CARD (Identical to Shopify Paid section) */}
+                    {/* PAYMENT DETAILS CARD */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 space-y-4">
                       <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
@@ -3805,7 +3865,6 @@ export default function AdminDashboard({
 
                       {/* Event logs / feed */}
                       <div className="space-y-4">
-                        {/* Custom posted comments */}
                         {(timelineComments[selectedOrder.id] || []).map((comment, cIdx) => (
                           <div key={cIdx} className="flex justify-between items-start text-xs relative pl-6 pb-2">
                             <div className="absolute left-2.5 top-1.5 bottom-0 border-l border-slate-200 -z-10" />
@@ -3820,7 +3879,6 @@ export default function AdminDashboard({
                           </div>
                         ))}
 
-                        {/* Default activity log item 1 */}
                         <div className="flex justify-between items-center text-xs relative pl-6">
                           <div className="absolute left-2.5 top-1.5 bottom-0 border-l border-slate-200 -z-10" />
                           <div className="absolute left-1.5 top-1.5 w-2.5 h-2.5 rounded-full bg-slate-400 border border-white" />
@@ -3831,7 +3889,6 @@ export default function AdminDashboard({
                           <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">Just now</span>
                         </div>
 
-                        {/* Default activity log item 2 */}
                         <div className="flex justify-between items-center text-xs relative pl-6 pb-2">
                           <div className="absolute left-2.5 top-1.5 bottom-0 border-l border-slate-100 -z-10" />
                           <div className="absolute left-1.5 top-1.5 w-2.5 h-2.5 rounded-full bg-slate-350 border border-white" />
@@ -3948,7 +4005,7 @@ export default function AdminDashboard({
 
                 </div>
 
-                {/* MODAL OVERLAY: ADD TRACKING DIALOG (Matches screenshot 1) */}
+                {/* MODAL OVERLAY: ADD TRACKING DIALOG */}
                 {showTrackingModal && (
                   <div className="fixed inset-0 z-55 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-3xs">
                     <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-fade-in text-slate-800">
@@ -4029,7 +4086,6 @@ export default function AdminDashboard({
                               setSelectedOrder(updated);
                               setShowTrackingModal(false);
 
-                              // Log comment
                               const trackingComment = `Added tracking details: ${carrierInput} (${trackingNumberInput}).`;
                               setTimelineComments(prev => ({
                                 ...prev,
@@ -4351,7 +4407,6 @@ export default function AdminDashboard({
                   }
                   onUpdateProducts(updatedProducts);
 
-                  // Synchronize Collection Memberships
                   const updatedCollections = collections.map(col => {
                     const belongs = selectedCollectionIds.includes(col.id);
                     const alreadyHas = col.productIds.includes(savedProduct.id);
@@ -4372,7 +4427,6 @@ export default function AdminDashboard({
                   const updated = products.filter(p => p.id !== productId);
                   onUpdateProducts(updated);
 
-                  // Clean up collection references
                   const updatedColls = collections.map(c => ({
                     ...c,
                     productIds: c.productIds.filter(id => id !== productId)
@@ -4757,7 +4811,8 @@ export default function AdminDashboard({
                                 const pageSlug = page.slug || page.id;
                                 const updated = localPages.filter(p => p.id !== page.id && p.slug !== page.slug);
                                 setLocalPages(updated);
-                                onUpdateCustomPages(updated);
+                                parentOnUpdateCustomPages(updated);
+                                savePagesToDatabase(updated);
                                 if (pageId) fetch(`/api/custompages/${pageId}`, { method: 'DELETE' }).catch(() => {});
                                 if (pageSlug && pageSlug !== pageId) fetch(`/api/custompages/${pageSlug}`, { method: 'DELETE' }).catch(() => {});
                               }
@@ -5399,7 +5454,7 @@ export default function AdminDashboard({
                                   );
                                 })()}
 
-                                {/* 10. FEATURED COLLECTION (Fully interactive template preview grid) */}
+                                {/* 10. FEATURED COLLECTION */}
                                 {sec.type === 'Featured collection' && (() => {
                                   const selectedColl = localCollections.find(c => c.id === sec.settings.selectedCollectionId);
                                   const displayedProducts = localProducts
@@ -5447,7 +5502,7 @@ export default function AdminDashboard({
                                   );
                                 })()}
 
-                                {/* 10.5. CLEARANCE SALE (Interactive template preview grid) */}
+                                {/* 10.5. CLEARANCE SALE */}
                                 {sec.type === 'Clearance Sale' && (() => {
                                   const selectedIds = sec.settings.selectedProductIds || [];
                                   const displayedProducts = localProducts.filter(p => selectedIds.includes(p.id));
@@ -5707,9 +5762,8 @@ export default function AdminDashboard({
                                    <BrandsWeOfferSectionAdmin sec={sec} />
                                  )}
 
-                                 {false && sec.type === 'Brands we offer' && (() => {
+                                {false && sec.type === 'Brands we offer' && (() => {
                                   const items = (sec.settings.brandItems || []).filter(b => b.imageUrl && b.imageUrl.trim() !== '');
-                                  // Duplicate items for seamless scrolling loop
                                   const doubledItems = items.length > 0 ? [...items, ...items, ...items] : [];
                                   return (
                                     <div className="py-6 space-y-4 font-sans text-center bg-white border border-slate-100 rounded-2xl overflow-hidden relative shadow-xs">
@@ -6866,7 +6920,6 @@ export default function AdminDashboard({
                                   const plansList = currentlyEditingSection.settings.planItems || [];
                                   let plan = plansList.find(p => p.slug === slug);
                                   
-                                  // Fallback initialization if plan entry doesn't exist
                                   if (!plan) {
                                     plan = {
                                       slug,
@@ -8042,11 +8095,9 @@ export default function AdminDashboard({
                 }}
                 onSave={(savedDiscount) => {
                   if (editingDiscount) {
-                    // Update existing
                     const updated = discounts.map(d => d.id === savedDiscount.id ? savedDiscount : d);
                     onUpdateDiscounts(updated);
                   } else {
-                    // Create new
                     onUpdateDiscounts([...discounts, savedDiscount]);
                   }
                   setIsDiscountEditorOpen(false);
@@ -8202,7 +8253,7 @@ export default function AdminDashboard({
               </>
             )}
 
-            {/* Select Discount Type Modal Popup (matches ss5.png) */}
+            {/* Select Discount Type Modal Popup */}
             {showDiscountTypeSelector && (
               <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200">
@@ -8521,7 +8572,7 @@ export default function AdminDashboard({
             </div>
           </>
         ) : (
-          // HIGH FIDELITY EDITOR SCREEN (SCREENSHOT LAYOUT)
+          // HIGH FIDELITY EDITOR SCREEN
           (() => {
             const isEdit = !!selectedBlog;
             const titleValue = isEdit ? selectedBlog.title : (newBlogForm.title || '');
@@ -9727,7 +9778,7 @@ export default function AdminDashboard({
           </div>
         )}
 
-        {/* CUSTOM CONFIRMATION DIALOG MODAL (Guaranteed to work in sandboxed iframes) */}
+        {/* CUSTOM CONFIRMATION DIALOG MODAL */}
         {confirmDialog && confirmDialog.isOpen && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[10000]">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 text-left">
