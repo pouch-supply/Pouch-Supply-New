@@ -497,107 +497,36 @@ export default function CheckoutView({
       return;
     }
 
-    if (paymentMethod === 'hosted') {
-      setIsProcessing(true);
-      setPaymentError(null);
-
-      // Generate a clean Order ID before creating the session
-      const generatedOrderId = `PS${Math.floor(Math.random() * 90000 + 10000)}`;
-
-      const requestPayload = {
-        orderId: generatedOrderId,
-        amount: finalTotalToPay.toFixed(2),
-        currency: 'GBP',
-        customerName: fullName,
-        customerEmail: email,
-        destination: `${addressLine}, ${city}, ${postcode}, ${country}`,
-        cartItems: cartItems.map(item => ({
-          productId: item.productId,
-          productTitle: item.productTitle,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image
-        }))
-      };
-
-      addLog('REQUEST', {
-        endpoint: '/api/worldpay/session',
-        method: 'POST',
-        body: requestPayload
-      });
-
-      try {
-        const response = await fetch('/api/worldpay/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestPayload)
-        });
-
-        const responseData = await response.json();
-
-        if (!response.ok) {
-          addLog('ERROR', {
-            statusCode: response.status,
-            error: responseData.error || 'Session Init Failed',
-            message: 'Could not establish Worldpay Hosted Payment Session'
-          });
-          throw new Error(responseData.error || 'Failed to initialize session');
-        }
-
-        addLog('RESPONSE', responseData);
-
-        // Successfully generated payment session! Now redirect to Worldpay hosted checkout
-        setIsProcessing(false);
-        
-        // Redirect to Worldpay Hosted Payment Page
-        if (responseData.redirectUrl) {
-          if (responseData.redirectUrl.startsWith('http://') || responseData.redirectUrl.startsWith('https://')) {
-            console.log(`[Worldpay Redirect] Redirecting customer to official Worldpay Hosted Payment Page: ${responseData.redirectUrl}`);
-            window.location.href = responseData.redirectUrl;
-          } else {
-            window.history.pushState({}, '', responseData.redirectUrl);
-            window.dispatchEvent(new Event('popstate'));
-          }
-        }
-      } catch (err: any) {
-        setPaymentError(err.message || 'Payment session initialization failed.');
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    // Direct card integration method
-    if (!cardNumber || cardNumber.length < 15 || !expiry || expiry.length < 5 || !cvv || cvv.length < 3) {
-      setPaymentError('Please enter valid card details.');
-      return;
-    }
-
     setIsProcessing(true);
     setPaymentError(null);
 
+    // Generate clean Order ID before creating the session
+    const generatedOrderId = `PS${Math.floor(Math.random() * 90000 + 10000)}`;
+
     const requestPayload = {
-      cardHolderName: cardHolder,
-      cardNumber: cardNumber,
-      expiry: expiry,
-      cvv: cvv,
+      orderId: generatedOrderId,
       amount: finalTotalToPay.toFixed(2),
       currency: 'GBP',
-      simulationMode: simulationMode
+      customerName: fullName,
+      customerEmail: email,
+      destination: `${addressLine}, ${city}, ${postcode}, ${country}`,
+      cartItems: cartItems.map(item => ({
+        productId: item.productId,
+        productTitle: item.productTitle,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image
+      }))
     };
 
     addLog('REQUEST', {
-      endpoint: '/api/worldpay/process',
+      endpoint: '/api/worldpay/session',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: {
-        ...requestPayload,
-        cardNumber: cardNumber.substring(0, 4) + ' **** **** ' + cardNumber.slice(-4),
-        cvv: '***'
-      }
+      body: requestPayload
     });
 
     try {
-      const response = await fetch('/api/worldpay/process', {
+      const response = await fetch('/api/worldpay/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestPayload)
@@ -608,48 +537,28 @@ export default function CheckoutView({
       if (!response.ok) {
         addLog('ERROR', {
           statusCode: response.status,
-          error: responseData.error || 'Authorization Failed',
-          message: responseData.message || 'Gateway reported failure'
+          error: responseData.error || 'Session Init Failed',
+          message: 'Could not establish Worldpay Hosted Payment Session'
         });
-        throw new Error(responseData.message || responseData.error || 'Payment gateway connection error');
+        throw new Error(responseData.error || 'Failed to initialize session');
       }
 
       addLog('RESPONSE', responseData);
 
-      if (responseData.paymentStatus === '3DS_REQUIRED') {
-        // Trigger simulated 3D Secure modal
-        setThreeDsTxId(responseData.transactionId);
-        setShow3dsModal(true);
-        setIsProcessing(false);
-      } else if (responseData.paymentStatus === 'AUTHORISED') {
-        // Payment authorized successfully!
-        setPaymentSuccessData(responseData);
-        setIsProcessing(false);
-
-        // Place the official order
-        const orderId = `PS${Math.floor(Math.random() * 90000 + 10000)}`;
-        onCompleteCheckout({
-          orderId,
-          customerName: fullName,
-          customerEmail: email,
-          address: `${addressLine}, ${city}, ${postcode}, ${country}`,
-          total: finalTotalToPay,
-          discountApplied: currentDiscount,
-          items: cartItems.map(item => ({
-            productId: item.productId,
-            productTitle: item.productTitle,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image
-          })),
-          worldpayTxId: responseData.transactionId,
-          worldpayAuthCode: responseData.authCode,
-          cardBrand: responseData.cardBrand,
-          storeCreditApplied: storeCreditApplied
-        });
+      // Successfully generated payment session! Redirect to Worldpay hosted checkout
+      setIsProcessing(false);
+      
+      if (responseData.redirectUrl) {
+        if (responseData.redirectUrl.startsWith('http://') || responseData.redirectUrl.startsWith('https://')) {
+          console.log(`[Worldpay Redirect] Redirecting customer to official Worldpay Hosted Payment Page: ${responseData.redirectUrl}`);
+          window.location.href = responseData.redirectUrl;
+        } else {
+          window.history.pushState({}, '', responseData.redirectUrl);
+          window.dispatchEvent(new Event('popstate'));
+        }
       }
     } catch (err: any) {
-      setPaymentError(err.message || 'Payment processing failed. Please select a different simulation parameter.');
+      setPaymentError(err.message || 'Payment session initialization failed.');
       setIsProcessing(false);
     }
   };

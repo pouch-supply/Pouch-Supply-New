@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { fetchResource, saveResource } from "../../serverDb";
 import { sendOrderConfirmationEmail } from "../email";
@@ -6,107 +6,126 @@ import { Order } from "../../src/types";
 
 const router = Router();
 
-// Retrieve Worldpay configuration keys
-const WORLDPAY_CLIENT_ID = process.env.WORLDPAY_CLIENT_ID || "";
-const WORLDPAY_CLIENT_SECRET = process.env.WORLDPAY_CLIENT_SECRET || "";
-const WORLDPAY_API_KEY = process.env.WORLDPAY_API_KEY || "";
-const WORLDPAY_WEBHOOK_SECRET = process.env.WORLDPAY_WEBHOOK_SECRET || "";
-
-// Credentials provided by user
-const WORLDPAY_INSTALLATION_ID = process.env.WORLDPAY_INSTALLATION_ID || process.env.WORLDPAY_INST_ID || "";
-const WORLDPAY_API_USERNAME = process.env.WORLDPAY_API_USERNAME || "";
-const WORLDPAY_API_PASSWORD = process.env.WORLDPAY_API_PASSWORD || "";
-const WORLDPAY_ENTITY_ID = process.env.WORLDPAY_ENTITY_ID || "";
-const WORLDPAY_TEST_MODE = process.env.WORLDPAY_TEST_MODE || "0";
+/**
+ * Worldpay Hosted Payment Pages (HPP) Configuration
+ */
+const getInstallationId = () => process.env.WORLDPAY_INSTALLATION_ID || process.env.WORLDPAY_INST_ID || "";
+const getTestMode = () => process.env.WORLDPAY_TEST_MODE || "0"; // "100" for Test Mode, "0" for Live Mode
+const getWebhookSecret = () => process.env.WORLDPAY_WEBHOOK_SECRET || process.env.WORLDPAY_CALLBACK_PASSWORD || "";
+const getAppUrl = (req?: Request) => {
+  if (process.env.APP_URL && process.env.APP_URL.trim() !== "") {
+    return process.env.APP_URL.trim().replace(/\/$/, "");
+  }
+  if (req) {
+    const protocol = req.headers["x-forwarded-proto"] || (req.secure ? "https" : "http");
+    const host = req.headers["x-forwarded-host"] || req.get("host") || "localhost:3000";
+    return `${protocol}://${host}`;
+  }
+  return "http://localhost:3000";
+};
 
 /**
- * Utility: Verifies the Worldpay signature of incoming webhook payloads
+ * Utility: Verifies Worldpay HMAC-SHA256 Signature using raw request body
  */
-function verifyWorldpaySignature(payload: string, signature: string, secret: string): boolean {
+function verifyWorldpaySignature(rawBody: string | Buffer, signature: string, secret: string): boolean {
   if (!signature || !secret) return false;
   try {
+    const payload = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, "utf8");
     const computed = crypto
       .createHmac("sha256", secret)
       .update(payload)
       .digest("hex");
-    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(signature));
+    return crypto.timingSafeEqual(Buffer.from(computed, "hex"), Buffer.from(signature, "hex"));
   } catch (err) {
-    console.error("[Worldpay Signature Verification] Cryptographic error:", err);
+    console.error("[Worldpay Signature Verification] Error:", err);
     return false;
   }
 }
 
 /**
- * Helper: Updates order payment status in the database/memory and triggers emails
+ * Updates order payment status in database and triggers email.
+ * Idempotent: Prevents duplicate status updates or duplicate emails.
  */
-async function processSuccessfulOrderPayment(orderId: string, details: {
+export async function processSuccessfulOrderPayment(orderId: string, details: {
   transactionId: string;
-  authCode: string;
-  cardBrand: string;
+  authCode?: string;
+  cardBrand?: string;
+  amount?: number;
 }) {
   const ordersList = await fetchResource("orders");
   const orderIdx = ordersList.findIndex((o: any) => o.id === orderId);
 
-  if (orderIdx !== -1) {
-    const order = ordersList[orderIdx];
-    
-    // Check if it's already processed to avoid duplicate actions/emails
-    if (order.paymentStatus === "Paid") {
-      console.log(`[Worldpay Callback] Order ${orderId} is already paid. Skipping email trigger.`);
-      return order;
-    }
-
-    // Update payment details
-    order.paymentStatus = "Paid";
-    order.worldpayTxId = details.transactionId;
-    order.worldpayAuthCode = details.authCode;
-    order.cardBrand = details.cardBrand;
-    order.date = new Date().toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }) + " (UTC)";
-
-    ordersList[orderIdx] = order;
-    await saveResource("orders", ordersList);
-    console.log(`[Worldpay Callback] Order ${orderId} successfully updated to 'Paid' in database.`);
-
-    // Trigger SMTP email confirmation
-    try {
-      await sendOrderConfirmationEmail(order);
-    } catch (err) {
-      console.error(`[Worldpay Callback] Failed to send email for Order ${orderId}:`, err);
-    }
-
-    return order;
-  } else {
-    console.warn(`[Worldpay Callback] Order ${orderId} not found in database to update status.`);
+  if (orderIdx === -1) {
+    console.warn(`[Worldpay Order] Order ${orderId} not found in database to update status.`);
     return null;
   }
+
+  const order = ordersList[orderIdx];
+
+  // Prevent duplicate processing or duplicate emails
+  if (order.paymentStatus === "Paid") {
+    console.log(`[Worldpay Order] Order ${orderId} is already marked as Paid. Skipping duplicate email.`);
+    return order;
+  }
+
+  // Update order fields
+  order.paymentStatus = "Paid";
+  order.worldpayTxId = details.transactionId;
+  order.worldpayAuthCode = details.authCode || `WPY-AUTH-${Math.floor(Math.random() * 900000 + 100000)}`;
+  order.cardBrand = details.cardBrand || "Worldpay Card";
+  if (details.amount && details.amount > 0) {
+    order.total = details.amount;
+  }
+  order.date = new Date().toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }) + " (UTC)";
+
+  ordersList[orderIdx] = order;
+  await saveResource("orders", ordersList);
+  console.log(`[Worldpay Order] Order ${orderId} successfully set to 'Paid' (TxID: ${details.transactionId}).`);
+
+  // Trigger SMTP order confirmation email
+  try {
+    console.log(`[Worldpay Order] Sending order confirmation email for Order ${orderId} to ${order.customerEmail}...`);
+    await sendOrderConfirmationEmail(order);
+    console.log(`[Worldpay Order] Order confirmation email sent successfully for Order ${orderId}.`);
+  } catch (emailErr: any) {
+    console.error(`[Worldpay Order] Failed to send order confirmation email for Order ${orderId}:`, emailErr);
+  }
+
+  return order;
 }
 
 /**
- * 1. POST: Create Worldpay Checkout Session
- * In production, this makes a request to Worldpay's secure checkout session API.
- * In development/test (when credentials are absent), it returns a redirect to our elegant in-app simulated payment gateway.
+ * 1. POST: Create Worldpay Hosted Payment Page Redirect Session
  */
-router.post("/session", async (req, res) => {
+router.post("/session", async (req: Request, res: Response) => {
   try {
     const { orderId, amount, currency = "GBP", customerEmail, customerName, destination, cartItems } = req.body;
 
-    if (!orderId || !amount || !customerEmail || !customerName) {
+    const instId = getInstallationId();
+    if (!instId) {
       return res.status(400).json({
-        error: "Missing required session parameters.",
-        details: { orderId: !!orderId, amount: !!amount, customerEmail: !!customerEmail, customerName: !!customerName }
+        error: "Worldpay Installation ID (WORLDPAY_INSTALLATION_ID) is missing. Please configure your Worldpay Installation ID in .env or the Admin Dashboard.",
+        requiresConfig: true
       });
     }
 
-    console.log(`[Worldpay Session] Creating payment session for Order: ${orderId}, Amount: £${amount}`);
+    if (!orderId || !amount || !customerEmail || !customerName) {
+      return res.status(400).json({
+        error: "Missing required session parameters (orderId, amount, customerEmail, customerName)."
+      });
+    }
 
-    // Create the Order in "Pending" status in our database if it doesn't exist
+    const testMode = getTestMode();
+    const appUrl = getAppUrl(req);
+
+    // Pre-register pending order in database
     const ordersList = await fetchResource("orders");
     let existingOrder = ordersList.find((o: any) => o.id === orderId);
 
@@ -136,248 +155,187 @@ router.post("/session", async (req, res) => {
       console.log(`[Worldpay Session] Pre-registered pending order ${orderId} in database.`);
     }
 
-    const sessionId = `wp-sess-${crypto.randomBytes(8).toString("hex")}`;
-    const protocol = req.secure ? 'https' : 'http';
-    const host = req.get('host') || 'localhost:3000';
-    const shopperResultUrl = `${protocol}://${host}/api/worldpay/callback?orderId=${orderId}`;
+    // Worldpay Business Gateway Hosted Payment Page URL
+    const baseUrl = testMode === "100"
+      ? "https://select-test.worldpay.com/wcc/purchase"
+      : "https://select.worldpay.com/wcc/purchase";
 
-    // Mode A: Official Worldpay Business Gateway Hosted Payment Page
-    if (WORLDPAY_INSTALLATION_ID) {
-      console.log(`[Worldpay Session] Building official Worldpay Hosted Payment Page redirect for Installation ID: ${WORLDPAY_INSTALLATION_ID}`);
-      
-      const baseUrl = WORLDPAY_TEST_MODE === "100" 
-        ? "https://select-test.worldpay.com/wcc/purchase" 
-        : "https://select.worldpay.com/wcc/purchase";
+    const callbackUrl = `${appUrl}/api/worldpay/callback?orderId=${orderId}`;
 
-      const hppParams = new URLSearchParams({
-        instId: WORLDPAY_INSTALLATION_ID,
-        cartId: orderId,
-        amount: parseFloat(amount).toFixed(2),
-        currency: currency,
-        desc: `Pouch Supply Order #${orderId}`,
-        name: customerName,
-        email: customerEmail,
-        address1: destination || '',
-        testMode: WORLDPAY_TEST_MODE,
-        MC_callback: shopperResultUrl
-      });
-
-      const redirectUrl = `${baseUrl}?${hppParams.toString()}`;
-
-      return res.json({
-        success: true,
-        paymentSessionId: sessionId,
-        amount: parseFloat(amount),
-        currency,
-        redirectUrl,
-        mode: "WORLDPAY_BUSINESS_GATEWAY_HPP"
-      });
-    }
-    
-    // Mode B: Worldpay Access / Oppwa Checkout Integration
-    if (WORLDPAY_API_USERNAME && WORLDPAY_API_PASSWORD && WORLDPAY_ENTITY_ID) {
-      console.log("[Worldpay Session] Connecting to Worldpay Access / Oppwa API endpoints.");
-
-      let givenName = customerName.trim().split(/\s+/)[0] || 'Customer';
-      let surname = customerName.trim().split(/\s+/).slice(1).join(' ') || 'Customer';
-
-      givenName = givenName.replace(/[^a-zA-Z]/g, '') || 'Customer';
-      surname = surname.replace(/[^a-zA-Z]/g, '') || 'Customer';
-
-      const params = new URLSearchParams();
-      params.append('entityId', WORLDPAY_ENTITY_ID);
-      params.append('amount', parseFloat(amount).toFixed(2));
-      params.append('currency', currency);
-      params.append('paymentType', 'DB');
-      params.append('merchantTransactionId', orderId);
-      params.append('customer.email', customerEmail);
-      params.append('customer.givenName', givenName);
-      params.append('customer.surname', surname);
-      params.append('shopperResultUrl', shopperResultUrl);
-
-      try {
-        const useBasic = WORLDPAY_API_USERNAME.toLowerCase() === 'basic';
-        const authHeader = useBasic 
-          ? 'Basic ' + Buffer.from(`${WORLDPAY_API_USERNAME}:${WORLDPAY_API_PASSWORD}`).toString('base64')
-          : `Bearer ${WORLDPAY_API_PASSWORD}`;
-
-        const apiEndpoint = WORLDPAY_TEST_MODE === '100'
-          ? 'https://test.oppwa.com/v1/checkouts'
-          : 'https://oppwa.com/v1/checkouts';
-
-        const apiResponse = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: params.toString()
-        });
-
-        const data: any = await apiResponse.json();
-        console.log(`[Worldpay Session] Oppwa API response status ${apiResponse.status}:`, JSON.stringify(data));
-
-        if (apiResponse.ok && data.id) {
-          const redirectUrl = `https://test.oppwa.com/v1/paymentWidgets.js?checkoutId=${data.id}`;
-          return res.json({
-            success: true,
-            paymentSessionId: data.id,
-            amount: parseFloat(amount),
-            currency,
-            redirectUrl,
-            mode: "WORLDPAY_ACCESS_OPPWA"
-          });
-        } else {
-          return res.status(400).json({
-            error: `Worldpay API Rejected Request: ${data.result?.description || 'Invalid parameters or credentials.'}`,
-            details: data
-          });
-        }
-      } catch (apiErr: any) {
-        console.error("[Worldpay Session] Connection error:", apiErr);
-        return res.status(502).json({
-          error: `Failed to connect to Worldpay API: ${apiErr.message || 'Connection timeout'}`
-        });
-      }
-    }
-
-    // Missing Worldpay configuration
-    return res.status(400).json({
-      error: "Worldpay Hosted Payment Page is not configured. Please provide your Worldpay Installation ID (instId) or API credentials in .env or the Admin Dashboard.",
-      requiresConfig: true
+    const hppParams = new URLSearchParams({
+      instId: instId,
+      cartId: orderId,
+      amount: parseFloat(amount).toFixed(2),
+      currency: currency,
+      desc: `Pouch Supply Order #${orderId}`,
+      name: customerName,
+      email: customerEmail,
+      address1: destination || '',
+      testMode: testMode,
+      MC_callback: callbackUrl
     });
+
+    const redirectUrl = `${baseUrl}?${hppParams.toString()}`;
+
+    console.log(`[Worldpay Session] Generated Worldpay HPP URL for Order ${orderId}: ${redirectUrl}`);
+
+    return res.json({
+      success: true,
+      orderId,
+      amount: parseFloat(amount),
+      currency,
+      redirectUrl,
+      mode: "WORLDPAY_HOSTED_PAYMENT_PAGE"
+    });
+
   } catch (err: any) {
-    console.error("[Worldpay Session] Error creating payment session:", err);
-    res.status(500).json({ error: err.message || "Failed to initialize Worldpay payment session." });
+    console.error("[Worldpay Session] Error initializing HPP session:", err);
+    return res.status(500).json({ error: err.message || "Failed to initialize Worldpay Hosted Payment Page session." });
   }
 });
 
 /**
- * 1b. GET: Worldpay / ACI Callback Endpoint
- * Handles shopper redirect after transaction completion on ACI / Oppwa Widgets.
+ * 2. GET & POST: Shopper Callback / Redirect Endpoint from Worldpay Hosted Payment Page
  */
-router.get("/callback", async (req, res) => {
+const handleCallback = async (req: Request, res: Response) => {
   try {
-    const { orderId, id: checkoutId } = req.query;
+    const params = { ...req.query, ...req.body };
+    const orderId = (params.orderId || params.cartId || params.MC_orderId) as string;
+    const transStatus = (params.transStatus || params.paymentStatus || params.status) as string;
+    const transId = (params.transId || params.transactionId || params.worldpayTxId) as string;
+    const authCode = (params.rawAuthCode || params.authCode) as string;
+    const rawAmount = params.authAmount || params.amount;
+    const amount = rawAmount ? parseFloat(rawAmount as string) : undefined;
 
-    if (!orderId || !checkoutId) {
-      return res.status(400).send("Callback requires both orderId and checkout id.");
+    console.log(`[Worldpay Callback] Callback received for Order: ${orderId}, Status: ${transStatus}, TransID: ${transId}`);
+
+    if (!orderId) {
+      return res.status(400).send("Callback error: Missing order ID parameter.");
     }
 
-    console.log(`[Worldpay Callback] Verifying real transaction for Checkout ID: ${checkoutId}, Order ID: ${orderId}`);
-
-    // Call GET https://test.oppwa.com/v1/checkouts/${checkoutId}/payment?entityId=${entityId}
-    const useBasic = WORLDPAY_API_USERNAME.toLowerCase() === 'basic';
-    const authHeader = useBasic 
-      ? 'Basic ' + Buffer.from(`${WORLDPAY_API_USERNAME}:${WORLDPAY_API_PASSWORD}`).toString('base64')
-      : `Bearer ${WORLDPAY_API_PASSWORD}`;
-
-    const verificationUrl = `https://test.oppwa.com/v1/checkouts/${checkoutId}/payment?entityId=${WORLDPAY_ENTITY_ID}`;
-
-    const response = await fetch(verificationUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': authHeader
-      }
-    });
-
-    const data: any = await response.json();
-    console.log(`[Worldpay Callback] Verification response:`, JSON.stringify(data));
-
-    if (!response.ok) {
-      throw new Error(data.result?.description || 'Failed to verify transaction with payment provider.');
+    // Verify callback password if configured
+    const webhookSecret = getWebhookSecret();
+    if (webhookSecret && params.callbackPW && params.callbackPW !== webhookSecret) {
+      console.warn(`[Worldpay Callback] Callback password mismatch for Order ${orderId}.`);
+      return res.status(401).send("Unauthorized: Invalid Worldpay callback password.");
     }
 
-    // ACI/Oppwa success codes are typically starting with 000.000, 000.100, 000.300, 000.600
-    const successRegex = /^(000\.000\.|000\.100\.|000\.300\.|000\.600\.)/;
-    const isSuccess = successRegex.test(data.result?.code);
+    const isSuccess = transStatus === "Y" || transStatus === "AUTHORISED" || transStatus === "Paid" || transStatus === "APPROVED";
+    const isCancelled = transStatus === "C" || transStatus === "CANCELLED";
 
     if (isSuccess) {
-      // Complete payment and update database & trigger email!
-      await processSuccessfulOrderPayment(orderId as string, {
-        transactionId: data.id || (checkoutId as string),
-        authCode: data.registrationId || data.ndc || `WPY-${Math.floor(Math.random() * 900000 + 100000)}`,
-        cardBrand: data.paymentBrand || 'Card'
+      const updatedOrder = await processSuccessfulOrderPayment(orderId, {
+        transactionId: transId || `wp-tx-${Date.now()}`,
+        authCode,
+        cardBrand: (params.cardType as string) || "Worldpay Card",
+        amount
       });
 
-      // Redirect user to the frontend success screen
-      return res.redirect(`/payment/success?orderId=${orderId}&amount=${data.amount}`);
+      const totalToPass = updatedOrder?.total || amount || 0;
+      return res.redirect(`/payment/success?orderId=${orderId}&amount=${totalToPass}`);
+    } else if (isCancelled) {
+      console.log(`[Worldpay Callback] Transaction cancelled for Order ${orderId}.`);
+      const ordersList = await fetchResource("orders");
+      const idx = ordersList.findIndex((o: any) => o.id === orderId);
+      if (idx !== -1) {
+        ordersList[idx].paymentStatus = "Cancelled";
+        await saveResource("orders", ordersList);
+      }
+      return res.redirect(`/payment/cancelled?orderId=${orderId}`);
     } else {
-      // Transaction failed
-      const reason = data.result?.description || 'Transaction declined by payment gateway.';
-      console.warn(`[Worldpay Callback] Transaction failed for Order ${orderId}: ${reason}`);
+      const reason = (params.rawAuthMessage || params.reason || "Payment authorization declined by card issuer.") as string;
+      console.warn(`[Worldpay Callback] Payment failed for Order ${orderId}: ${reason}`);
+      const ordersList = await fetchResource("orders");
+      const idx = ordersList.findIndex((o: any) => o.id === orderId);
+      if (idx !== -1) {
+        ordersList[idx].paymentStatus = "Failed";
+        await saveResource("orders", ordersList);
+      }
       return res.redirect(`/payment/failed?orderId=${orderId}&reason=${encodeURIComponent(reason)}`);
     }
-
   } catch (err: any) {
-    console.error("[Worldpay Callback] Error during callback processing:", err);
-    return res.redirect(`/payment/failed?orderId=${req.query.orderId || 'Unknown'}&reason=${encodeURIComponent(err.message || 'System verification timeout.')}`);
+    console.error("[Worldpay Callback] Error during callback handling:", err);
+    return res.redirect(`/payment/failed?orderId=${req.query.orderId || "Unknown"}&reason=${encodeURIComponent(err.message || "Gateway callback verification timeout.")}`);
   }
-});
+};
+
+router.get("/callback", handleCallback);
+router.post("/callback", handleCallback);
 
 /**
- * 2. POST: Complete Payment directly (for in-app API flow)
- * Handles authorization requests immediately.
+ * 3. POST: Asynchronous Worldpay Webhook Endpoint
  */
-router.post("/process-direct", async (req, res) => {
+router.post("/webhook", async (req: Request, res: Response) => {
+  const secret = getWebhookSecret();
+  const signature = req.headers["x-worldpay-signature"] as string;
+
+  console.log(`[Worldpay Webhook] Notification received. Signature header: ${signature || 'None'}`);
+
+  // Retrieve raw unparsed body for signature verification
+  const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body || {}));
+
+  if (secret) {
+    if (!signature) {
+      console.warn("[Worldpay Webhook] Missing x-worldpay-signature header with secret configured.");
+      return res.status(401).json({ error: "Missing webhook signature header." });
+    }
+
+    const isValid = verifyWorldpaySignature(rawBody, signature, secret);
+    if (!isValid) {
+      console.warn("[Worldpay Webhook] Webhook HMAC signature verification FAILED.");
+      return res.status(401).json({ error: "Invalid webhook signature." });
+    }
+    console.log("[Worldpay Webhook] HMAC signature verified successfully.");
+  }
+
   try {
-    const { orderId, amount, cardHolderName, cardNumber, expiry, cvv, currency = "GBP" } = req.body;
+    const payload = req.body || {};
+    const eventType = payload.eventType || payload.event;
+    const data = payload.data || payload;
 
-    if (!orderId || !amount || !cardHolderName || !cardNumber || !expiry || !cvv) {
-      return res.status(400).json({ error: "Missing required checkout parameters." });
+    const orderId = data.orderId || data.cartId;
+    const transStatus = data.paymentStatus || data.transStatus;
+    const transactionId = data.transactionId || data.transId;
+    const authCode = data.authCode || data.rawAuthCode;
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Invalid webhook payload structure: missing orderId." });
     }
 
-    console.log(`[Worldpay Direct] Authorizing payment of £${amount} for Order: ${orderId}`);
+    console.log(`[Worldpay Webhook] Processing event for Order ${orderId}, Status: ${transStatus}`);
 
-    // Validate card format in mock manner
-    const cleanNum = cardNumber.replace(/\s+/g, "");
-    if (cleanNum.length < 13) {
-      return res.status(400).json({ error: "Invalid credit card number length." });
-    }
-
-    const transactionId = `wp-tx-${Math.floor(Math.random() * 9000000 + 1000000)}`;
-    const authCode = `WPY${Math.floor(Math.random() * 900000 + 100000)}`;
-    
-    let cardBrand = "Visa";
-    if (cleanNum.startsWith("5")) cardBrand = "Mastercard";
-    else if (cleanNum.startsWith("3")) cardBrand = "American Express";
-
-    const order = await processSuccessfulOrderPayment(orderId, {
-      transactionId,
-      authCode,
-      cardBrand
-    });
-
-    if (order) {
-      res.json({
-        success: true,
-        paymentStatus: "AUTHORISED",
-        transactionId,
+    if (eventType === "payment.success" || transStatus === "Y" || transStatus === "AUTHORISED" || transStatus === "Paid" || transStatus === "APPROVED") {
+      await processSuccessfulOrderPayment(orderId, {
+        transactionId: transactionId || `wp-wh-${Date.now()}`,
         authCode,
-        message: "Payment authorized successfully."
+        cardBrand: data.cardBrand || "Worldpay Card"
       });
-    } else {
-      res.status(404).json({ error: "Order details could not be matched." });
+    } else if (transStatus === "Failed" || transStatus === "CANCELLED" || transStatus === "C" || transStatus === "N") {
+      const ordersList = await fetchResource("orders");
+      const idx = ordersList.findIndex((o: any) => o.id === orderId);
+      if (idx !== -1) {
+        ordersList[idx].paymentStatus = transStatus === "C" ? "Cancelled" : "Failed";
+        await saveResource("orders", ordersList);
+      }
     }
+
+    return res.status(200).json({ success: true, message: "Webhook processed successfully." });
   } catch (err: any) {
-    console.error("[Worldpay Direct] Authorization Error:", err);
-    res.status(500).json({ error: err.message || "Failed to process card transaction." });
+    console.error("[Worldpay Webhook] Processing Error:", err);
+    return res.status(500).json({ error: "Webhook processing encountered an internal error." });
   }
 });
 
 /**
- * 3. GET: Verify Order Payment Status
- * Checks status of order in database and ensures the email is sent as a safeguard.
+ * 4. GET: Verify Order Payment Status from Database
  */
-router.get("/verify", async (req, res) => {
+router.get("/verify", async (req: Request, res: Response) => {
   try {
     const { orderId } = req.query;
 
     if (!orderId) {
       return res.status(400).json({ error: "Order ID query parameter is required." });
     }
-
-    console.log(`[Worldpay Verification] Checking status for Order ID: ${orderId}`);
 
     const ordersList = await fetchResource("orders");
     const order = ordersList.find((o: any) => o.id === orderId);
@@ -386,70 +344,17 @@ router.get("/verify", async (req, res) => {
       return res.status(404).json({ error: "Order not found." });
     }
 
-    res.json({
+    return res.json({
       orderId: order.id,
       paymentStatus: order.paymentStatus || "Pending",
       transactionId: order.worldpayTxId || null,
       authCode: order.worldpayAuthCode || null,
       amount: order.total,
+      customerEmail: order.customerEmail
     });
   } catch (err: any) {
     console.error("[Worldpay Verification] Error:", err);
-    res.status(500).json({ error: err.message || "Failed to verify payment status." });
-  }
-});
-
-/**
- * 4. POST: Worldpay Webhook Endpoint
- * Listens for real payment event messages from Worldpay servers.
- */
-router.post("/webhook", async (req, res) => {
-  const signature = req.headers["x-worldpay-signature"] as string;
-  const rawBody = JSON.stringify(req.body);
-
-  console.log(`[Worldpay Webhook] Received webhook event. Signature header: ${signature}`);
-
-  // Validate webhook signature to prevent spoofing
-  if (WORLDPAY_WEBHOOK_SECRET) {
-    const isValid = verifyWorldpaySignature(rawBody, signature, WORLDPAY_WEBHOOK_SECRET);
-    if (!isValid) {
-      console.warn("[Worldpay Webhook] Webhook signature verification FAILED. Rejecting payload.");
-      return res.status(401).json({ error: "Invalid webhook signature." });
-    }
-    console.log("[Worldpay Webhook] Signature verification successful.");
-  }
-
-  try {
-    const { eventType, data } = req.body;
-    
-    if (!eventType || !data) {
-      return res.status(400).json({ error: "Invalid webhook payload structure." });
-    }
-
-    const { orderId, paymentStatus, transactionId, authCode, cardBrand = "Visa" } = data;
-
-    console.log(`[Worldpay Webhook] EventType: ${eventType}, Order: ${orderId}, Status: ${paymentStatus}`);
-
-    if (eventType === "payment.success" || paymentStatus === "AUTHORISED" || paymentStatus === "Paid") {
-      await processSuccessfulOrderPayment(orderId, {
-        transactionId: transactionId || `wp-webhook-tx-${Date.now()}`,
-        authCode: authCode || `WPY-WEB-${Math.floor(Math.random() * 900000 + 100000)}`,
-        cardBrand
-      });
-    } else if (paymentStatus === "Failed" || paymentStatus === "CANCELLED") {
-      const ordersList = await fetchResource("orders");
-      const orderIdx = ordersList.findIndex((o: any) => o.id === orderId);
-      if (orderIdx !== -1) {
-        ordersList[orderIdx].paymentStatus = "Failed";
-        await saveResource("orders", ordersList);
-        console.log(`[Worldpay Webhook] Order ${orderId} set to 'Failed' based on webhook notification.`);
-      }
-    }
-
-    res.status(200).json({ success: true, message: "Webhook processed successfully" });
-  } catch (err: any) {
-    console.error("[Worldpay Webhook] Processing Error:", err);
-    res.status(500).json({ error: "Webhook processing encountered a internal error" });
+    return res.status(500).json({ error: err.message || "Failed to verify payment status." });
   }
 });
 

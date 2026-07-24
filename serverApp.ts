@@ -62,7 +62,12 @@ export async function createExpressApp() {
     if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
       return next();
     }
-    express.json({ limit: "50mb" })(req, res, next);
+    express.json({
+      limit: "50mb",
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      }
+    })(req, res, next);
   });
 
   app.use((req, res, next) => {
