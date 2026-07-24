@@ -15,6 +15,7 @@ import customPagesRouter from "./backend/routes/customPages";
 import blogsRouter from "./backend/routes/blogs";
 import worldpayRouter from "./backend/routes/worldpay";
 import agecheckedRouter from "./backend/routes/agechecked";
+import { sendOrderConfirmationEmail } from "./backend/email";
 
 export function parseCloudinaryCredentials(rawCloudName?: string, rawApiKey?: string, rawApiSecret?: string) {
   let cloudName = (rawCloudName || "").trim();
@@ -428,6 +429,27 @@ export async function createExpressApp() {
   app.use("/api/blogs", blogsRouter);
   app.use("/api/worldpay", worldpayRouter);
   app.use("/api/agechecked", agecheckedRouter);
+
+  // API Route: Trigger automatic order confirmation emails (from scottkivlinpouch@gmail.com)
+  app.post("/api/send-order-confirmation", async (req, res) => {
+    try {
+      const order = req.body;
+      if (!order || !order.customerEmail) {
+        return res.status(400).json({ error: "Missing order details or customer email address." });
+      }
+      console.log(`[Order Email Endpoint] Dispatching order confirmation for Order #${order.id} to ${order.customerEmail}`);
+      const success = await sendOrderConfirmationEmail(order);
+      res.json({ 
+        success: true, 
+        message: `Order confirmation email processed for ${order.customerEmail}`, 
+        orderId: order.id,
+        sender: "scottkivlinpouch@gmail.com"
+      });
+    } catch (err: any) {
+      console.error("[Order Email Endpoint] Error dispatching email:", err);
+      res.status(500).json({ error: err.message || "Failed to send order confirmation email." });
+    }
+  });
 
   // Vite middleware for development or static serving for production
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {

@@ -29,6 +29,7 @@ import {
   Sparkles, ShieldCheck, Truck, RefreshCw, Star, ArrowRight, Package, ShoppingCart, Check, Heart, User, CheckCircle2, Save, AlertTriangle, Search, Undo, Mail, X
 } from 'lucide-react';
 import OrderWithdrawalModal from './components/OrderWithdrawalModal';
+import { cleanMediaUrl } from './utils/mediaUtils';
 import { 
   initKlaviyo, 
   klaviyoIdentify, 
@@ -1260,6 +1261,15 @@ export default function App() {
     // Dispatch global event for visual updates
     window.dispatchEvent(new CustomEvent('ps-emails-updated'));
 
+    // Automatically send order confirmation email to the customer's checkout email (from scottkivlinpouch@gmail.com)
+    fetch('/api/send-order-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOrder)
+    }).then(res => res.json())
+      .then(data => console.log('[Order Confirmation Email] Dispatched:', data))
+      .catch(err => console.error('[Order Confirmation Email] Dispatch failed:', err));
+
     // Handle coupon used increase
     if (paymentDetails.discountApplied) {
       setDiscounts(prev => prev.map(d => d.id === paymentDetails.discountApplied!.id ? { ...d, used: d.used + 1 } : d));
@@ -1475,20 +1485,39 @@ export default function App() {
 
   if (!isInitialLoadDone) {
     return (
-      <div className="min-h-screen bg-[#f6f6f7] flex flex-col items-center justify-center p-6" id="app-loading-state">
-        <div className="space-y-4 max-w-md w-full text-center flex flex-col items-center">
-          {/* Elegant spinning logo indicator */}
-          <div className="w-12 h-12 bg-gradient-to-tr from-[#008060] to-[#00a880] rounded-xl flex items-center justify-center shadow-md animate-bounce mb-2">
-            <div className="w-5 h-5 border-2 border-white rounded-md"></div>
+      <div className="min-h-screen bg-[#f6f6f7] flex flex-col items-center justify-center p-6 select-none" id="app-loading-state">
+        <div className="space-y-6 max-w-md w-full text-center flex flex-col items-center animate-fade-in">
+          {/* Header Logo */}
+          <div className="flex items-center justify-center">
+            {layoutSettings?.headerLogoImage ? (
+              <img 
+                src={cleanMediaUrl(layoutSettings.headerLogoImage)} 
+                className="max-h-16 max-w-[220px] object-contain rounded-lg" 
+                alt={layoutSettings?.headerLogoText || 'Pouch Supply'} 
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="flex items-center gap-3 bg-white px-5 py-3.5 rounded-2xl shadow-sm border border-slate-200/80">
+                <div className="w-10 h-10 bg-gradient-to-tr from-[#008060] to-[#00a880] rounded-xl flex items-center justify-center shadow-sm">
+                  <div className="w-4.5 h-4.5 border-2 border-white rounded-md"></div>
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="font-extrabold text-[#1a1c1d] tracking-tight text-xl leading-none">
+                    {layoutSettings?.headerLogoText || 'Pouch Supply'}
+                  </span>
+                  <span className="text-[9px] text-[#707579] font-extrabold uppercase tracking-widest mt-1">
+                    {layoutSettings?.headerLogoSubtext || 'Premium Nicotine'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-          <h2 className="font-extrabold text-[#1a1c1d] tracking-tight text-lg leading-none">Pouch Supply</h2>
-          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-mono">Initializing Premium Catalog...</p>
-          <div className="h-0.5 w-24 bg-slate-200 rounded-full overflow-hidden relative">
-            <div className="absolute top-0 left-0 bottom-0 bg-[#008060] rounded-full animate-[shimmer_1.5s_infinite]" style={{ width: '60%' }}></div>
+
+          {/* Loading Button Below Logo */}
+          <div className="flex items-center gap-2.5 px-6 py-2.5 bg-white border border-slate-200 shadow-2xs rounded-full text-slate-700 text-xs font-black uppercase tracking-wider">
+            <span className="w-4 h-4 border-2 border-[#008060] border-t-transparent rounded-full animate-spin shrink-0"></span>
+            <span>Loading...</span>
           </div>
-          <p className="text-[10.5px] text-slate-500 font-medium leading-relaxed max-w-xs">
-            Preparing Swedish premium nicotine canister catalogs and live inventories...
-          </p>
         </div>
       </div>
     );
