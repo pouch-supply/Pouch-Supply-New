@@ -150,31 +150,36 @@ export default function CheckoutView({
   useEffect(() => {
     if (ageCheckedActiveMethod === 'BIOMETRIC' && ageCheckedStep === 'verifying') {
       let activeStream: MediaStream | null = null;
+      let interval: any = null;
+
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
         .then(stream => {
           setAgeCheckedLocalStream(stream);
           activeStream = stream;
+
+          setAgeCheckedScanningProgress(0);
+          interval = setInterval(() => {
+            setAgeCheckedScanningProgress(prev => {
+              if (prev >= 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                  handleConfirmAgeCheckedVerification('BIOMETRIC', fullName || 'Verified Customer', 'AgeChecked Facial Age Estimation 18+ Passed');
+                }, 500);
+                return 100;
+              }
+              return prev + 10;
+            });
+          }, 200);
         })
         .catch(err => {
-          console.warn("Camera hardware not available, using high-fidelity face mesh scan simulation:", err);
+          console.error("Camera required for AgeChecked face estimation:", err);
+          alert("Camera access is required for Facial Age Estimation. No camera was detected or permission was denied. Please connect a camera or select another age verification method.");
+          setAgeCheckedActiveMethod(null);
+          setAgeCheckedStep('select');
         });
-
-      setAgeCheckedScanningProgress(0);
-      const interval = setInterval(() => {
-        setAgeCheckedScanningProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              handleConfirmAgeCheckedVerification('BIOMETRIC', fullName || 'Verified Pouch Client', 'AgeChecked Facial Age Estimation 18+ Passed');
-            }, 500);
-            return 100;
-          }
-          return prev + 5;
-        });
-      }, 100);
 
       return () => {
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
         if (activeStream) {
           activeStream.getTracks().forEach(track => track.stop());
         }
@@ -193,7 +198,7 @@ export default function CheckoutView({
             clearInterval(interval);
             setTimeout(() => {
               let detailsStr = '';
-              let targetName = fullName || 'Verified Pouch Client';
+              let targetName = fullName || 'Verified Customer';
               
               if (ageCheckedActiveMethod === 'ELECTORAL') {
                 detailsStr = `Electoral Register Match at Postcode: ${electoralPostcode}, DOB: ${electoralDob}`;
@@ -228,7 +233,7 @@ export default function CheckoutView({
   ) => {
     const payload = {
       method,
-      name: customName || fullName || 'Verified Pouch Client',
+      name: customName || fullName || 'Verified Customer',
       dob: method === 'ELECTORAL' ? electoralDob : undefined,
       postcode: method === 'ELECTORAL' ? electoralPostcode : (postcode || undefined),
       phone: method === 'MOBILE' ? mobilePhone : undefined,
@@ -251,15 +256,11 @@ export default function CheckoutView({
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error(`Server returned error status ${res.status}`);
-      }
-
       const data = await res.json();
       
       addLog('RESPONSE', data);
 
-      if (data.success && data.verified) {
+      if (res.ok && data.success && data.verified) {
         const verificationObj = {
           method: data.method,
           timestamp: data.timestamp,
@@ -280,29 +281,23 @@ export default function CheckoutView({
         const event = new CustomEvent('agechecked-status-updated', { detail: { verified: true, details: verificationObj } });
         window.dispatchEvent(event);
       } else {
-        throw new Error(data.error || 'Verification declined.');
+        const errMsg = data.error || 'Age Verification declined by AgeChecked API.';
+        addLog('ERROR', { message: errMsg });
+        alert(`Age Verification Failed: ${errMsg}`);
+        setAgeCheckedVerified(false);
+        setAgeCheckedStep('select');
+        sessionStorage.removeItem('agechecked_verified');
+        sessionStorage.removeItem('agechecked_details');
       }
     } catch (err: any) {
-      console.warn('[AgeChecked Client API Error, falling back to local simulation]', err);
-      addLog('ERROR', { message: err.message || 'AgeChecked API handshake failed, executing fail-safe verification' });
-      
-      const backupToken = `ac_v3_fallback_${Math.floor(100000 + Math.random() * 900000)}_${method.toLowerCase()}`;
-      const backupObj = {
-        method,
-        timestamp: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date().toLocaleDateString('en-GB'),
-        token: backupToken,
-        name: customName || fullName || 'Verified Pouch Client',
-        details: (customDetails || 'Instant age check approved') + ' (Fail-safe secure simulation backup active)'
-      };
-      
-      setAgeCheckedDetails(backupObj);
-      setAgeCheckedVerified(true);
-      setAgeCheckedStep('success');
-      sessionStorage.setItem('agechecked_verified', 'true');
-      sessionStorage.setItem('agechecked_details', JSON.stringify(backupObj));
-
-      const event = new CustomEvent('agechecked-status-updated', { detail: { verified: true, details: backupObj } });
-      window.dispatchEvent(event);
+      console.error('[AgeChecked Client API Error]', err);
+      const errMsg = err.message || 'AgeChecked API connection failed.';
+      addLog('ERROR', { message: errMsg });
+      alert(`Age Verification Service Error: ${errMsg}`);
+      setAgeCheckedVerified(false);
+      setAgeCheckedStep('select');
+      sessionStorage.removeItem('agechecked_verified');
+      sessionStorage.removeItem('agechecked_details');
     }
   };
 
@@ -554,11 +549,15 @@ export default function CheckoutView({
         // Successfully generated payment session! Now redirect to Worldpay hosted checkout
         setIsProcessing(false);
         
-        // Perform SPA-friendly browser redirection to the payment gateway simulator
+        // Redirect to Worldpay Hosted Payment Page
         if (responseData.redirectUrl) {
-          window.history.pushState({}, '', responseData.redirectUrl);
-          // Dispatch popstate event to trigger route transition in main App.tsx
-          window.dispatchEvent(new Event('popstate'));
+          if (responseData.redirectUrl.startsWith('http://') || responseData.redirectUrl.startsWith('https://')) {
+            console.log(`[Worldpay Redirect] Redirecting customer to official Worldpay Hosted Payment Page: ${responseData.redirectUrl}`);
+            window.location.href = responseData.redirectUrl;
+          } else {
+            window.history.pushState({}, '', responseData.redirectUrl);
+            window.dispatchEvent(new Event('popstate'));
+          }
         }
       } catch (err: any) {
         setPaymentError(err.message || 'Payment session initialization failed.');

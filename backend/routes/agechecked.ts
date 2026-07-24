@@ -153,17 +153,20 @@ router.post("/verify", async (req, res) => {
     const signature = generateHmacSignature(payloadString, timestamp);
     const baseUrl = getApiBaseUrl();
 
+    const maskedPubKey = ageCheckedConfig.publicKey 
+      ? `${ageCheckedConfig.publicKey.substring(0, 8)}...${ageCheckedConfig.publicKey.substring(ageCheckedConfig.publicKey.length - 8)}`
+      : "Not configured";
+
     let apiResponseData: any = null;
     let verifiedOk = false;
     let token = `ac_v3_${signature.substring(0, 16)}_${method.toLowerCase()}`;
     let detailsStr = "";
 
-    // Attempt real HTTP request to AgeChecked API endpoint
     try {
       console.log(`[AgeChecked API Outbound] Connecting to ${baseUrl}/v3/verify for customer: ${name || 'Client'} (${method})`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 sec timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
 
       const response = await fetch(`${baseUrl}/v3/verify`, {
         method: "POST",
@@ -183,37 +186,29 @@ router.post("/verify", async (req, res) => {
 
       if (response.ok) {
         apiResponseData = await response.json();
-        verifiedOk = apiResponseData.verified ?? apiResponseData.success ?? true;
-        if (apiResponseData.token) token = apiResponseData.token;
-        detailsStr = apiResponseData.details || `AgeChecked v3 Direct API Verified (${method})`;
-        console.log(`[AgeChecked API] Outbound API request succeeded:`, apiResponseData);
+        verifiedOk = apiResponseData.verified ?? apiResponseData.success ?? false;
+        token = apiResponseData.token || `ac_v3_${signature.substring(0, 16)}_${method.toLowerCase()}`;
+        detailsStr = apiResponseData.details || `AgeChecked v3 Official API Verified (${method})`;
+        console.log(`[AgeChecked API] Outbound API response:`, apiResponseData);
       } else {
         const errorText = await response.text();
-        console.warn(`[AgeChecked API] Outbound endpoint returned ${response.status}: ${errorText}. Executing secure server-side HMAC validation.`);
+        console.warn(`[AgeChecked API] Outbound endpoint returned ${response.status}: ${errorText}`);
+        return res.status(response.status || 400).json({
+          success: false,
+          verified: false,
+          error: `AgeChecked API returned error status ${response.status}: ${errorText || 'Invalid credentials or verification failed.'}`,
+          publicKeyUsed: maskedPubKey
+        });
       }
     } catch (fetchErr: any) {
-      console.info(`[AgeChecked API Direct Request] ${fetchErr.message || fetchErr}. Using authenticated server-side cryptographic HMAC-SHA256 signature verification.`);
+      console.error(`[AgeChecked API Error] ${fetchErr.message || fetchErr}`);
+      return res.status(502).json({
+        success: false,
+        verified: false,
+        error: `Failed to connect to AgeChecked official API endpoint (${baseUrl}): ${fetchErr.message || 'Connection timeout'}. Please verify AgeChecked API keys in Admin Dashboard.`,
+        publicKeyUsed: maskedPubKey
+      });
     }
-
-    // Fallback/direct detail generation if upstream direct API is in sandbox/local bridge mode
-    if (!detailsStr) {
-      if (method === "ELECTORAL") {
-        detailsStr = `UK Electoral Roll Match verified at Postcode: ${postcode || "EC1A 1BB"}, DOB: ${dob || "1995-06-15"}`;
-      } else if (method === "CARD") {
-        detailsStr = `UK Credit Card Pre-Auth 18+ verified. Last 4 digits: ${(docNumber || "4321").slice(-4)}`;
-      } else if (method === "MOBILE") {
-        detailsStr = `Mobile operator ${network || "EE"} age lookup verified for phone: ${phone || "07123456789"}`;
-      } else if (method === "DOC") {
-        detailsStr = `Government ID (${docType || "Passport"}) verified. Reference: ${docNumber || "AB123456C"}`;
-      } else {
-        detailsStr = `AgeChecked AI Facial Age Estimation 18+ Passed. Accuracy score: 99.6%`;
-      }
-      verifiedOk = true;
-    }
-
-    const maskedPubKey = ageCheckedConfig.publicKey 
-      ? `${ageCheckedConfig.publicKey.substring(0, 8)}...${ageCheckedConfig.publicKey.substring(ageCheckedConfig.publicKey.length - 8)}`
-      : "Not configured";
 
     const verificationResult = {
       success: true,
@@ -221,7 +216,7 @@ router.post("/verify", async (req, res) => {
       method,
       name: name || "Verified Customer",
       token: token,
-      details: `${detailsStr} | HMAC Sign: ${signature.substring(0, 12)}`,
+      details: `${detailsStr} | Signature: ${signature.substring(0, 12)}`,
       timestamp: timestampStr,
       publicKeyUsed: maskedPubKey,
       environment: ageCheckedConfig.environment,
@@ -230,9 +225,9 @@ router.post("/verify", async (req, res) => {
     };
 
     // Store in ledger for UK PAS 1296 compliance audit trail
-    verificationLedger.set(token, verificationResult);
-
-    console.log(`[AgeChecked API] Order verification record #${token} saved. Verified: ${verifiedOk}`);
+    if (verifiedOk) {
+      verificationLedger.set(token, verificationResult);
+    }
 
     return res.json(verificationResult);
 

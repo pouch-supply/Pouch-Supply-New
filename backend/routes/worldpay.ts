@@ -10,13 +10,14 @@ const router = Router();
 const WORLDPAY_CLIENT_ID = process.env.WORLDPAY_CLIENT_ID || "";
 const WORLDPAY_CLIENT_SECRET = process.env.WORLDPAY_CLIENT_SECRET || "";
 const WORLDPAY_API_KEY = process.env.WORLDPAY_API_KEY || "";
-const WORLDPAY_WEBHOOK_SECRET = process.env.WORLDPAY_WEBHOOK_SECRET || "wp_secret_xyz123";
+const WORLDPAY_WEBHOOK_SECRET = process.env.WORLDPAY_WEBHOOK_SECRET || "";
 
-// New credentials provided by user
+// Credentials provided by user
+const WORLDPAY_INSTALLATION_ID = process.env.WORLDPAY_INSTALLATION_ID || process.env.WORLDPAY_INST_ID || "";
 const WORLDPAY_API_USERNAME = process.env.WORLDPAY_API_USERNAME || "";
 const WORLDPAY_API_PASSWORD = process.env.WORLDPAY_API_PASSWORD || "";
 const WORLDPAY_ENTITY_ID = process.env.WORLDPAY_ENTITY_ID || "";
-const WORLDPAY_CHECKOUT_ID = process.env.WORLDPAY_CHECKOUT_ID || "";
+const WORLDPAY_TEST_MODE = process.env.WORLDPAY_TEST_MODE || "0";
 
 /**
  * Utility: Verifies the Worldpay signature of incoming webhook payloads
@@ -136,16 +137,47 @@ router.post("/session", async (req, res) => {
     }
 
     const sessionId = `wp-sess-${crypto.randomBytes(8).toString("hex")}`;
-    
-    // Check if real API credentials are configured
-    if (WORLDPAY_API_USERNAME && WORLDPAY_API_PASSWORD && WORLDPAY_ENTITY_ID) {
-      console.log("[Worldpay Session] Integrating with real Worldpay (Oppwa / Peach / ACI) Sandbox API endpoints.");
-      
-      const protocol = req.secure ? 'https' : 'http';
-      const host = req.get('host') || 'localhost:3000';
-      const shopperResultUrl = `${protocol}://${host}/api/worldpay/callback?orderId=${orderId}`;
+    const protocol = req.secure ? 'https' : 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const shopperResultUrl = `${protocol}://${host}/api/worldpay/callback?orderId=${orderId}`;
 
-      // Sanitize given and surname fields to prevent validation errors with Oppwa
+    // Mode A: Official Worldpay Business Gateway Hosted Payment Page
+    if (WORLDPAY_INSTALLATION_ID) {
+      console.log(`[Worldpay Session] Building official Worldpay Hosted Payment Page redirect for Installation ID: ${WORLDPAY_INSTALLATION_ID}`);
+      
+      const baseUrl = WORLDPAY_TEST_MODE === "100" 
+        ? "https://select-test.worldpay.com/wcc/purchase" 
+        : "https://select.worldpay.com/wcc/purchase";
+
+      const hppParams = new URLSearchParams({
+        instId: WORLDPAY_INSTALLATION_ID,
+        cartId: orderId,
+        amount: parseFloat(amount).toFixed(2),
+        currency: currency,
+        desc: `Pouch Supply Order #${orderId}`,
+        name: customerName,
+        email: customerEmail,
+        address1: destination || '',
+        testMode: WORLDPAY_TEST_MODE,
+        MC_callback: shopperResultUrl
+      });
+
+      const redirectUrl = `${baseUrl}?${hppParams.toString()}`;
+
+      return res.json({
+        success: true,
+        paymentSessionId: sessionId,
+        amount: parseFloat(amount),
+        currency,
+        redirectUrl,
+        mode: "WORLDPAY_BUSINESS_GATEWAY_HPP"
+      });
+    }
+    
+    // Mode B: Worldpay Access / Oppwa Checkout Integration
+    if (WORLDPAY_API_USERNAME && WORLDPAY_API_PASSWORD && WORLDPAY_ENTITY_ID) {
+      console.log("[Worldpay Session] Connecting to Worldpay Access / Oppwa API endpoints.");
+
       let givenName = customerName.trim().split(/\s+/)[0] || 'Customer';
       let surname = customerName.trim().split(/\s+/).slice(1).join(' ') || 'Customer';
 
@@ -164,14 +196,16 @@ router.post("/session", async (req, res) => {
       params.append('shopperResultUrl', shopperResultUrl);
 
       try {
-        // ACI Worldwide (Oppwa) typically expects standard Bearer authorization header.
-        // We support both Bearer (default/modern) and Basic formats.
         const useBasic = WORLDPAY_API_USERNAME.toLowerCase() === 'basic';
         const authHeader = useBasic 
           ? 'Basic ' + Buffer.from(`${WORLDPAY_API_USERNAME}:${WORLDPAY_API_PASSWORD}`).toString('base64')
           : `Bearer ${WORLDPAY_API_PASSWORD}`;
 
-        const apiResponse = await fetch('https://test.oppwa.com/v1/checkouts', {
+        const apiEndpoint = WORLDPAY_TEST_MODE === '100'
+          ? 'https://test.oppwa.com/v1/checkouts'
+          : 'https://oppwa.com/v1/checkouts';
+
+        const apiResponse = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
             'Authorization': authHeader,
@@ -184,51 +218,34 @@ router.post("/session", async (req, res) => {
         console.log(`[Worldpay Session] Oppwa API response status ${apiResponse.status}:`, JSON.stringify(data));
 
         if (apiResponse.ok && data.id) {
-          const redirectUrl = `/payment/worldpay-gateway?orderId=${orderId}&amount=${amount}&checkoutId=${data.id}&isReal=true`;
+          const redirectUrl = `https://test.oppwa.com/v1/paymentWidgets.js?checkoutId=${data.id}`;
           return res.json({
             success: true,
             paymentSessionId: data.id,
             amount: parseFloat(amount),
             currency,
             redirectUrl,
+            mode: "WORLDPAY_ACCESS_OPPWA"
           });
         } else {
-          console.warn("[Worldpay Session] Oppwa API connection returned status error:", data);
-          // Fallback to simulator if API responds with error
-          const redirectUrl = `/payment/worldpay-gateway?orderId=${orderId}&amount=${amount}&sessionId=${sessionId}`;
-          return res.json({
-            success: true,
-            paymentSessionId: sessionId,
-            amount: parseFloat(amount),
-            currency,
-            redirectUrl,
-            warning: "API credentials or parameters rejected. Falling back to secure sandbox simulator."
+          return res.status(400).json({
+            error: `Worldpay API Rejected Request: ${data.result?.description || 'Invalid parameters or credentials.'}`,
+            details: data
           });
         }
       } catch (apiErr: any) {
-        console.warn("[Worldpay Session] Failed to connect to Oppwa API:", apiErr);
-        // Fallback to simulator if network / other error
-        const redirectUrl = `/payment/worldpay-gateway?orderId=${orderId}&amount=${amount}&sessionId=${sessionId}`;
-        return res.json({
-          success: true,
-          paymentSessionId: sessionId,
-          amount: parseFloat(amount),
-          currency,
-          redirectUrl,
-          warning: "API connection timeout. Falling back to secure sandbox simulator."
+        console.error("[Worldpay Session] Connection error:", apiErr);
+        return res.status(502).json({
+          error: `Failed to connect to Worldpay API: ${apiErr.message || 'Connection timeout'}`
         });
       }
-    } else {
-      console.log("[Worldpay Session] Utilizing Worldpay secure checkout simulation (credentials not configured).");
-      const redirectUrl = `/payment/worldpay-gateway?orderId=${orderId}&amount=${amount}&sessionId=${sessionId}`;
-      return res.json({
-        success: true,
-        paymentSessionId: sessionId,
-        amount: parseFloat(amount),
-        currency,
-        redirectUrl,
-      });
     }
+
+    // Missing Worldpay configuration
+    return res.status(400).json({
+      error: "Worldpay Hosted Payment Page is not configured. Please provide your Worldpay Installation ID (instId) or API credentials in .env or the Admin Dashboard.",
+      requiresConfig: true
+    });
   } catch (err: any) {
     console.error("[Worldpay Session] Error creating payment session:", err);
     res.status(500).json({ error: err.message || "Failed to initialize Worldpay payment session." });
